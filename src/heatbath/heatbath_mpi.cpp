@@ -7,8 +7,8 @@
 #include "heatbath.h"
 
 // Performs a Heatbath hit on a link using the Cabbibo-Marinari algorithm
-void mpi::heatbathcb::hit(GaugeField& field, const Geometry& geo, size_t site, int mu,
-                          double beta, SU3& A, std::mt19937_64& rng) {
+void mpi::heatbathcb::hit(GaugeField& field, const Geometry& geo, size_t site, int mu, double beta,
+                          SU3& A, std::mt19937_64& rng) {
     field.compute_staple(geo, site, mu, A);
 
     SU3 W = field.view_link_const(site, mu) * A;
@@ -57,16 +57,11 @@ void mpi::heatbathcb::sweep(GaugeField& field, const Geometry& geo, double beta,
 }
 
 // Generates Heatbath samples according to input parameters
-std::vector<double> mpi::heatbathcb::samples(GaugeField& field, const Geometry& geo,
-                                             const HbParams& params,
-                                             std::vector<std::mt19937_64>& rng) {
-    std::vector<double> meas(params.N_samples);
-    for (int m = 0; m < params.N_samples; m++) {
-        // Update
-        for (int s = 0; s < params.N_sweeps; s++) {
-            sweep(field, geo, params.beta, params.N_hits, rng, site_parity::EV);
-            sweep(field, geo, params.beta, params.N_hits, rng, site_parity::OD);
-        }
+void mpi::heatbathcb::sample(GaugeField& field, const Geometry& geo, const HbParams& params,
+                              std::vector<std::mt19937_64>& rng) {
+    // Update
+    for (int s = 0; s < params.N_sweeps; s++) {
+        sweep(field, geo, params.beta, params.N_hits, rng, site_parity::EV);
+        sweep(field, geo, params.beta, params.N_hits, rng, site_parity::OD);
     }
-    return meas;
 }

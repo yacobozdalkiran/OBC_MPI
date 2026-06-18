@@ -17,10 +17,8 @@ struct ECMCParams {
 
 struct HbParams {
     double beta = 6.0;
-    int N_samples = 10;
     int N_hits = 1;
     int N_sweeps = 1;
-    int N_therm = 100;
 };
 
 struct RunParamsECMC {

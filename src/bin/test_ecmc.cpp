@@ -26,7 +26,6 @@ int main(int argc, char* argv[]) {
 
     // ECMC
     ECMCParams ep{.beta = 6.0,
-                  .N_samples = 10,
                   .param_theta_sample = 6000,
                   .param_theta_refresh = 800,
                   .poisson = false,
@@ -49,7 +48,7 @@ int main(int argc, char* argv[]) {
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
         ecmc::sample_persistant_norev(chain, d, field, geo, ep, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 1, 4);
+        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 9);
         if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
     }
 

@@ -14,8 +14,8 @@ void hit(GaugeField& field, const Geometry& geo, size_t site, int mu, double bet
          std::mt19937_64& rng);
 void sweep(GaugeField& field, const Geometry& geo, double beta, int N_hits,
            std::vector<std::mt19937_64>& rng, site_parity update_parity);
-std::vector<double> samples(GaugeField& field, const Geometry& geo, const HbParams& params,
-                            std::vector<std::mt19937_64>& rng);
+void sample(GaugeField& field, const Geometry& geo, const HbParams& params,
+             std::vector<std::mt19937_64>& rng);
 }  // namespace mpi::heatbathcb
 
 #endif  // ECMC_MPI_HEATBATH_MPI_H

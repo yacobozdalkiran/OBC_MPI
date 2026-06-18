@@ -47,9 +47,9 @@ int main(int argc, char* argv[]) {
     for (int shifts = 0; shifts < N_shifts; shifts++) {
         mpi::shift::random_shift(field, geo, h, topo, rng[0]);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        mpi::heatbathcb::samples(field, geo, hp, rng);
+        mpi::heatbathcb::sample(field, geo, hp, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 1, 4);
+        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 9);
         if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
     }
 
