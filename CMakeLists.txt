@@ -14,6 +14,7 @@ add_executable(test_mpi src/bin/test_mpi.cpp
     src/geometry/Geometry.cpp
     src/geometry/types.h
     src/observables/observables.cpp
+    src/observables/observables_mpi.cpp
     src/mpi/MpiTopology.cpp
     src/mpi/HalosExchange.cpp
     src/mpi/HalosShift.h
