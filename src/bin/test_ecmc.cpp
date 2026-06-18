@@ -43,18 +43,18 @@ int main(int argc, char* argv[]) {
     if (topo.rank == 0) std::print("Initial plaquette : {}\n", plaquette);
 
     int N_shifts = 500;
-    double start_time = MPI_Wtime();
     for (int shifts = 0; shifts < N_shifts; shifts++) {
         mpi::shift::random_shift(field, geo, h, topo, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
+        double start_time = MPI_Wtime();
         ecmc::sample_persistant_norev(chain, d, field, geo, ep, rng);
+        double end_time = MPI_Wtime();
+        if (topo.rank == 0) {
+            std::print("Sweep time: {:.4f} seconds\n", end_time - start_time);
+        }
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
         plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 7);
         if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
-    }
-    double end_time = MPI_Wtime();
-    if (topo.rank == 0) {
-        std::print("Total simulation time: {:.4f} seconds\n", end_time - start_time);
     }
 
     MPI_Finalize();
