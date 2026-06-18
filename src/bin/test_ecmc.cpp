@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     int seed = topo.rank * 1000;
     std::mt19937_64 rng(seed);
     // Geometry
-    Geometry geo(10, 6);
+    Geometry geo(8, 4);
     // Field
     GaugeField field(geo);
     // Halos for shifts
@@ -42,13 +42,13 @@ int main(int argc, char* argv[]) {
     plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 3, 6);
     if (topo.rank == 0) std::print("Initial plaquette : {}\n", plaquette);
 
-    int N_shifts = 100;
+    int N_shifts = 500;
     for (int shifts = 0; shifts < N_shifts; shifts++) {
         mpi::shift::random_shift(field, geo, h, topo, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
         ecmc::sample_persistant_norev(chain, d, field, geo, ep, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 9);
+        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 7);
         if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
     }
 

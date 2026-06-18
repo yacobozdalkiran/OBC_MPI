@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
         rng[i].seed(123 + topo.rank * 1000 + i);
     }
     // Geometry
-    Geometry geo(10, 6);
+    Geometry geo(8, 4);
     // Field
     GaugeField field(geo);
     // Halos for shifts
@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
         mpi::heatbathcb::sample(field, geo, hp, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 9);
+        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 7);
         if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
     }
 

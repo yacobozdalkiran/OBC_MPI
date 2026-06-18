@@ -36,13 +36,14 @@ void mpi::heatbathcb::hit(GaugeField& field, const Geometry& geo, size_t site, i
 void mpi::heatbathcb::sweep(GaugeField& field, const Geometry& geo, double beta, int N_hits,
                             std::vector<std::mt19937_64>& rng, site_parity update_parity) {
 #pragma omp parallel for collapse(4)
-    for (int t = 1; t <= geo.L_int; t++) {
+    for (int t = 0; t < geo.T; t++) {
         for (int z = 1; z <= geo.L_int; z++) {
             for (int y = 1; y <= geo.L_int; y++) {
                 for (int x = 1; x <= geo.L_int; x++) {
                     size_t site = geo.index(x, y, z, t);
                     for (int mu = 0; mu < 4; mu++) {
-                        if (!geo.is_frozen(site, mu) and (geo.get_parity(site) == update_parity)) {
+                        if (!geo.is_frozen(site, mu) and (geo.get_parity(site) == update_parity) and
+                            not(t == geo.T - 1 and mu == 3)) {
                             int tid = omp_get_thread_num();
                             SU3 A;
                             for (int h = 0; h < N_hits; h++) {
@@ -58,7 +59,7 @@ void mpi::heatbathcb::sweep(GaugeField& field, const Geometry& geo, double beta,
 
 // Generates Heatbath samples according to input parameters
 void mpi::heatbathcb::sample(GaugeField& field, const Geometry& geo, const HbParams& params,
-                              std::vector<std::mt19937_64>& rng) {
+                             std::vector<std::mt19937_64>& rng) {
     // Update
     for (int s = 0; s < params.N_sweeps; s++) {
         sweep(field, geo, params.beta, params.N_hits, rng, site_parity::EV);

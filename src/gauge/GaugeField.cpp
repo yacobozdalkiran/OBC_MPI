@@ -76,26 +76,22 @@ void GaugeField::project_field_su3(const Geometry& geo) {
 // Computes the sum of all staples of a site
 void GaugeField::compute_staple(const Geometry& geo, size_t site, int mu, SU3& staple) const {
     staple.setZero();
-    size_t x = site;                        // x
-    size_t xmu = geo.get_neigh(x, mu, up);  // x+mu
-    for (int nu = 0; nu < 4; nu++) {
-        if (nu == mu) {
-            continue;
-        }
-        // Staple forward
-        size_t xnu = geo.get_neigh(x, nu, up);  // x+nu
-        const auto& U0 = view_link_const(xmu, nu);
-        const auto& U1 = view_link_const(xnu, mu);
-        const auto& U2 = view_link_const(x, nu);
-        staple += U0 * (U2 * U1).adjoint();
+    size_t link_idx = site * 4 + mu;
 
-        // Staple backward
-        size_t xmunu = geo.get_neigh(xmu, nu, down);  // x+mu-nu
-        size_t xmnu = geo.get_neigh(x, nu, down);     // x-nu
-        auto V0 = view_link_const(xmunu, nu);
-        auto V1 = view_link_const(xmnu, mu);
-        auto V2 = view_link_const(xmnu, nu);
-        staple += (V1 * V0).adjoint() * V2;
+    // Forward staples
+    for (size_t i = geo.fwd_start[link_idx]; i < geo.fwd_start[link_idx + 1]; ++i) {
+        const auto& s = geo.fwd_staples_opt[i];
+        staple += s.coeff * (view_link_const_off(s.off0) * 
+                            view_link_const_off(s.off1).adjoint() * 
+                            view_link_const_off(s.off2).adjoint());
+    }
+
+    // Backward staples
+    for (size_t i = geo.bwd_start[link_idx]; i < geo.bwd_start[link_idx + 1]; ++i) {
+        const auto& s = geo.bwd_staples_opt[i];
+        staple += s.coeff * (view_link_const_off(s.off0).adjoint() * 
+                            view_link_const_off(s.off1).adjoint() * 
+                            view_link_const_off(s.off2));
     }
 }
 

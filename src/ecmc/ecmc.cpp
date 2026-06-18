@@ -27,7 +27,7 @@ void ecmc::compute_list_staples(const GaugeField& field, const Geometry& geo, si
             const auto& U0 = field.view_link_const(xmu, nu);
             const auto& U1 = field.view_link_const(xnu, mu);
             const auto& U2 = field.view_link_const(x, nu);
-            list_staple[index] = U0 * (U2 * U1).adjoint();
+            list_staple[index] = U0 * (U2 * U1).adjoint() * geo.get_staple_coeff(site, mu, index);
         }
         if (geo.is_staple_valid(site, mu, index + 1)) {
             // Staple backward
@@ -36,9 +36,10 @@ void ecmc::compute_list_staples(const GaugeField& field, const Geometry& geo, si
             auto V0 = field.view_link_const(xmunu, nu);
             auto V1 = field.view_link_const(xmnu, mu);
             auto V2 = field.view_link_const(xmnu, nu);
-            list_staple[index + 1] = (V1 * V0).adjoint() * V2;
-            index += 2;
+            list_staple[index + 1] =
+                ((V1 * V0).adjoint() * V2) * geo.get_staple_coeff(site, mu, index + 1);
         }
+        index += 2;
     }
 }
 
@@ -244,7 +245,6 @@ void ecmc::sample_persistant_norev(LocalChainState& state, Distributions& d, Gau
     // Buffers de travail
     std::array<double, 6> reject_angles;
     std::array<SU3, 6> list_staple;
-    std::array<double, 6> mask_staple;
 
     while (true) {
         compute_list_staples(field, geo, site_current, mu_current, list_staple);
