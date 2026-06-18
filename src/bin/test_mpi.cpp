@@ -6,6 +6,8 @@
 #include "../geometry/Geometry.h"
 #include "../mpi/MpiTopology.h"
 #include "../mpi/HalosExchange.h"
+#include "../mpi/HalosShift.h"
+#include "../mpi/Shift.h"
 #include "../observables/observables_mpi.h"
 
 int main(int argc, char* argv[]) {
@@ -112,11 +114,18 @@ int main(int argc, char* argv[]) {
     // Re-initialize with hot start and exchange halos
     std::mt19937_64 rng(123 + rank);
     field.hot_start(geo, rng);
-    field.cold_start(geo);
     mpi::exchange::exchange_halos_cascade(field, geo, topo);
 
     double p = mpi::observables::mean_plaquette_global(field, geo, topo, 1, 3);
     if (topo.rank == 0) std::print("Plaquette MPI : {}\n", p);
+
+    if (topo.rank==0) std::println("Test Shift");
+    if (topo.rank == 0) std::print("Plaquette MPI : {}\n", p);
+    HalosShift halo_shift(geo);
+    mpi::shift::random_shift(field, geo, halo_shift, topo, rng);
+    if (topo.rank == 0) std::print("Plaquette MPI : {}\n", p);
+
+
     MPI_Finalize();
     return 0;
 }

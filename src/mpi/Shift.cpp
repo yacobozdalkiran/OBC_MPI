@@ -1,9 +1,10 @@
 #include "Shift.h"
+
 #include <iostream>
 
 #include "HalosExchange.h"
 
-//Packing into buffers
+// Packing into buffers
 void mpi::shift::pack_shift_slice(const GaugeField& field, const Geometry& geo,
                                   std::vector<Complex>& buffer, int dim, int start, int end) {
     size_t idx_buf = 0;
@@ -35,7 +36,7 @@ void mpi::shift::pack_shift_slice(const GaugeField& field, const Geometry& geo,
     }
 }
 
-//Unpacking into the field
+// Unpacking into the field
 void mpi::shift::unpack_shift_slice(GaugeField& field, const Geometry& geo,
                                     const std::vector<Complex>& buffer, int dim, int start,
                                     int end) {
@@ -65,7 +66,7 @@ void mpi::shift::unpack_shift_slice(GaugeField& field, const Geometry& geo,
     }
 }
 
-//Local shift of the field
+// Local shift of the field
 void mpi::shift::apply_local_shift(GaugeField& field, const Geometry& geo, int dim, int s) {
     if (s == 0) return;  // Rien à faire
 
@@ -122,17 +123,12 @@ void mpi::shift::apply_local_shift(GaugeField& field, const Geometry& geo, int d
 
 // Shifts the content of the lattices of s
 void mpi::shift::shift_field(GaugeField& field, const Geometry& geo, HalosShift& h,
-                             mpi::MpiTopology& topo, const int s[4]) {
-    for (int dim = 0; dim < 4; ++dim) {
+                             mpi::MpiTopology& topo, const int s[3]) {
+    // On ne décale jamais la dimension temporelle (pas de parallélisation temporelle, OBC)
+    for (int dim = 0; dim < 3; ++dim) {
         if (s[dim] == 0) continue;  // Pas de décalage pour cette dimension
 
         int shift = s[dim];
-
-        if (dim == 3) {
-            // Dimension 3 (time) is not parallelized, perform shift locally
-            apply_local_shift(field, geo, dim, shift);
-            continue;
-        }
 
         // 1. Calcul de la taille du buffer (volume de la tranche à envoyer)
         // La tranche à envoyer a une épaisseur de 'shift' sites
@@ -177,26 +173,23 @@ void mpi::shift::shift_field(GaugeField& field, const Geometry& geo, HalosShift&
     }
 }
 
-//Performs a random shift
+// Performs a random shift
 void mpi::shift::random_shift(GaugeField& field, const Geometry& geo, HalosShift& h,
                               mpi::MpiTopology& topo, std::mt19937_64& rng) {
-    int shift_x{}, shift_y{}, shift_z{}, shift_t{};
+    int shift_x{}, shift_y{}, shift_z{};
     std::uniform_int_distribution<int> rand_l_shift(0, geo.L_int - 1);
     shift_x = rand_l_shift(rng);
     shift_y = rand_l_shift(rng);
     shift_z = rand_l_shift(rng);
-    shift_t = rand_l_shift(rng);
 
     MPI_Bcast(&shift_x, 1, MPI_INT, 0, topo.cart_comm);
     MPI_Bcast(&shift_y, 1, MPI_INT, 0, topo.cart_comm);
     MPI_Bcast(&shift_z, 1, MPI_INT, 0, topo.cart_comm);
-    MPI_Bcast(&shift_t, 1, MPI_INT, 0, topo.cart_comm);
 
     if (topo.rank == 0) {
-        std::cout << "Shift (" << shift_x << ", " << shift_y << ", " << shift_z << ", " << shift_t
-                  << ")\n";
+        std::cout << "Shift (" << shift_x << ", " << shift_y << ", " << shift_z << ")\n";
     }
-    int s[4] = {shift_x, shift_y, shift_z, shift_t};
+    int s[3] = {shift_x, shift_y, shift_z};
     shift_field(field, geo, h, topo, s);
     // Après un shift global, les halos sont obsolètes
     // Il faut relancer l'échange de halos.
