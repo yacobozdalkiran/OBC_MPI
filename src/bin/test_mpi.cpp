@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     mpi::exchange::exchange_halos_cascade(field, geo, topo);
     if (rank == 0) std::print("Exchanging halos ok\n");
 
-    std::cout << "Rank " << rank << " link: " << field.view_link_const(geo.index(1, 1, 1, 3), 3) << "\n";
+    if (rank == 0) std::cout << "Rank " << rank << " link: " << field.view_link_const(geo.index(1, 1, 1, 3), 3) << "\n";
     if (rank == 0) std::cout << "Plaquette : " << mean_plaquette_weighted(field, geo, 1, 3) << "\n";
 
 

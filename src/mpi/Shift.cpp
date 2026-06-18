@@ -4,14 +4,14 @@
 #include "HalosExchange.h"
 
 //Packing into buffers
-void mpi::shift::pack_shift_slice(const GaugeField& field, const GeometryCB& geo,
+void mpi::shift::pack_shift_slice(const GaugeField& field, const Geometry& geo,
                                   std::vector<Complex>& buffer, int dim, int start, int end) {
     size_t idx_buf = 0;
     int c[4];
 
     // Bornes par défaut : tout le volume intérieur
-    int min_c[4] = {1, 1, 1, 1};
-    int max_c[4] = {geo.L_int, geo.L_int, geo.L_int, geo.L_int};
+    int min_c[4] = {1, 1, 1, 0};
+    int max_c[4] = {geo.L_int, geo.L_int, geo.L_int, geo.T - 1};
 
     // On restreint la dimension de transfert à la tranche [start, end]
     min_c[dim] = start;
@@ -36,13 +36,13 @@ void mpi::shift::pack_shift_slice(const GaugeField& field, const GeometryCB& geo
 }
 
 //Unpacking into the field
-void mpi::shift::unpack_shift_slice(GaugeField& field, const GeometryCB& geo,
+void mpi::shift::unpack_shift_slice(GaugeField& field, const Geometry& geo,
                                     const std::vector<Complex>& buffer, int dim, int start,
                                     int end) {
     size_t idx_buf = 0;
     int c[4];
-    int min_c[4] = {1, 1, 1, 1};
-    int max_c[4] = {geo.L_int, geo.L_int, geo.L_int, geo.L_int};
+    int min_c[4] = {1, 1, 1, 0};
+    int max_c[4] = {geo.L_int, geo.L_int, geo.L_int, geo.T - 1};
 
     // La destination est toujours le début (1 à s) ou la fin (L-s+1 à L)
     min_c[dim] = start;
@@ -66,29 +66,44 @@ void mpi::shift::unpack_shift_slice(GaugeField& field, const GeometryCB& geo,
 }
 
 //Local shift of the field
-void mpi::shift::apply_local_shift(GaugeField& field, const GeometryCB& geo, int dim, int s) {
+void mpi::shift::apply_local_shift(GaugeField& field, const Geometry& geo, int dim, int s) {
     if (s == 0) return;  // Rien à faire
 
     int L = geo.L_int;
+    int T = geo.T;
 
     // Pour un shift de s > 0 (vers la droite/haut), on doit
     // parcourir la dimension 'dim' à l'ENVERS pour ne pas écraser
     // les données dont on aura besoin plus tard.
 
-    // On définit les bornes de la boucle pour la dimension du shift
-    int start = L;
-    int end = s + 1;
-    int step = -1;
-
     // On parcourt la direction du shift à l'envers
-    for (int t = (dim == 3 ? start : 1); (dim == 3 ? t != end + step : t <= L);
-         t += (dim == 3 ? step : 1)) {
-        for (int z = (dim == 2 ? start : 1); (dim == 2 ? z != end + step : z <= L);
-             z += (dim == 2 ? step : 1)) {
-            for (int y = (dim == 1 ? start : 1); (dim == 1 ? y != end + step : y <= L);
-                 y += (dim == 1 ? step : 1)) {
-                for (int x = (dim == 0 ? start : 1); (dim == 0 ? x != end + step : x <= L);
-                     x += (dim == 0 ? step : 1)) {
+    // Pour les dimensions non concernées par le shift :
+    // - x, y, z bouclent de 1 à L
+    // - t boucle de 0 à T - 1
+    // Pour la dimension du shift (dim) :
+    // - si dim est spatiale, boucle de L à s + 1 (step -1)
+    // - si dim est temporelle, boucle de T - 1 à s (step -1)
+
+    int x_start = (dim == 0 ? L : 1);
+    int x_end = (dim == 0 ? s + 1 : L);
+    int x_step = (dim == 0 ? -1 : 1);
+
+    int y_start = (dim == 1 ? L : 1);
+    int y_end = (dim == 1 ? s + 1 : L);
+    int y_step = (dim == 1 ? -1 : 1);
+
+    int z_start = (dim == 2 ? L : 1);
+    int z_end = (dim == 2 ? s + 1 : L);
+    int z_step = (dim == 2 ? -1 : 1);
+
+    int t_start = (dim == 3 ? T - 1 : 0);
+    int t_end = (dim == 3 ? s : T - 1);
+    int t_step = (dim == 3 ? -1 : 1);
+
+    for (int t = t_start; (t_step == 1 ? t <= t_end : t >= t_end); t += t_step) {
+        for (int z = z_start; (z_step == 1 ? z <= z_end : z >= z_end); z += z_step) {
+            for (int y = y_start; (y_step == 1 ? y <= y_end : y >= y_end); y += y_step) {
+                for (int x = x_start; (x_step == 1 ? x <= x_end : x >= x_end); x += x_step) {
                     int c_dst[4] = {x, y, z, t};
                     int c_src[4] = {x, y, z, t};
                     c_src[dim] = c_dst[dim] - s;
@@ -106,15 +121,22 @@ void mpi::shift::apply_local_shift(GaugeField& field, const GeometryCB& geo, int
 }
 
 // Shifts the content of the lattices of s
-void mpi::shift::shift_field(GaugeField& field, const GeometryCB& geo, HalosShift& h,
+void mpi::shift::shift_field(GaugeField& field, const Geometry& geo, HalosShift& h,
                              mpi::MpiTopology& topo, const int s[4]) {
     for (int dim = 0; dim < 4; ++dim) {
         if (s[dim] == 0) continue;  // Pas de décalage pour cette dimension
 
         int shift = s[dim];
+
+        if (dim == 3) {
+            // Dimension 3 (time) is not parallelized, perform shift locally
+            apply_local_shift(field, geo, dim, shift);
+            continue;
+        }
+
         // 1. Calcul de la taille du buffer (volume de la tranche à envoyer)
         // La tranche à envoyer a une épaisseur de 'shift' sites
-        size_t slice_volume = shift * geo.L_int * geo.L_int * geo.L_int;
+        size_t slice_volume = shift * geo.L_int * geo.L_int * geo.T;
         size_t buffer_size = slice_volume * 4 * 9;
 
         // 2. PACKING : On prépare les données qui SORTENT du processeur
@@ -123,7 +145,7 @@ void mpi::shift::shift_field(GaugeField& field, const GeometryCB& geo, HalosShif
         pack_shift_slice(field, geo, h.send, dim, geo.L_int - shift + 1, geo.L_int);
 
         // 3. MPI SENDRECV
-        int rank_up, rank_down;
+        int rank_up = MPI_PROC_NULL, rank_down = MPI_PROC_NULL;
         // On récupère les voisins selon la dimension (topo.xL, topo.x0, etc.)
         switch (dim) {
             case 0:
@@ -138,15 +160,11 @@ void mpi::shift::shift_field(GaugeField& field, const GeometryCB& geo, HalosShif
                 rank_up = topo.zL;
                 rank_down = topo.z0;
                 break;
-            case 3:
-                rank_up = topo.tL;
-                rank_down = topo.t0;
-                break;
         }
 
-        // On envoie vers le haut, on reçoit du bas
+        // On envoie vers le haut, on reçoit du bas sur le communicateur cartésien topo.cart_comm
         MPI_Sendrecv(h.send.data(), buffer_size, MPI_DOUBLE_COMPLEX, rank_up, 0, h.recv.data(),
-                     buffer_size, MPI_DOUBLE_COMPLEX, rank_down, 0, MPI_COMM_WORLD,
+                     buffer_size, MPI_DOUBLE_COMPLEX, rank_down, 0, topo.cart_comm,
                      MPI_STATUS_IGNORE);
 
         // 4. SHIFT LOCAL : On décale les données qui restent dans le processeur
@@ -160,7 +178,7 @@ void mpi::shift::shift_field(GaugeField& field, const GeometryCB& geo, HalosShif
 }
 
 //Performs a random shift
-void mpi::shift::random_shift(GaugeField& field, const GeometryCB& geo, HalosShift& h,
+void mpi::shift::random_shift(GaugeField& field, const Geometry& geo, HalosShift& h,
                               mpi::MpiTopology& topo, std::mt19937_64& rng) {
     int shift_x{}, shift_y{}, shift_z{}, shift_t{};
     std::uniform_int_distribution<int> rand_l_shift(0, geo.L_int - 1);
@@ -183,4 +201,4 @@ void mpi::shift::random_shift(GaugeField& field, const GeometryCB& geo, HalosShi
     // Après un shift global, les halos sont obsolètes
     // Il faut relancer l'échange de halos.
     mpi::exchange::exchange_halos_cascade(field, geo, topo);
-};
+}

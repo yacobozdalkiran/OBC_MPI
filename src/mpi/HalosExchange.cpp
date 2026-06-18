@@ -3,8 +3,8 @@
 //Exchanges the halos between cores in cascade (for corners)
 void mpi::exchange::exchange_halos_cascade(GaugeField& field, const Geometry& geo,
                                            mpi::MpiTopology& topo) {
-    int min_coord[4] = {1, 1, 1, 1};
-    int max_coord[4] = {geo.L_int, geo.L_int, geo.L_int, geo.T};
+    int min_coord[4] = {1, 1, 1, 0};
+    int max_coord[4] = {geo.L_int, geo.L_int, geo.L_int, geo.T - 1};
 
     for (int dim = 0; dim < 3; ++dim) {
         // 1. Calculer la taille du buffer pour cette étape
