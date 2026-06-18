@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 3, 6);
     if (topo.rank == 0) std::print("Initial plaquette : {}\n", plaquette);
 
-    int N_shifts = 1000;
+    int N_shifts = 100;
     for (int shifts = 0; shifts < N_shifts; shifts++) {
         mpi::shift::random_shift(field, geo, h, topo, rng[0]);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
