@@ -23,7 +23,7 @@ struct LocalChainState {
     double theta_parcouru_refresh = 0.0;
     // Budgets de Poisson persistants
     double theta_sample = 0.0;
-    double theta_refresh= 0.0;
+    double theta_refresh = 0.0;
     // Compteur pour le set de matrices
     size_t set_counter;
     // Compteur de lifts
@@ -43,13 +43,12 @@ struct Distributions {
         : random_dir(0, 3),
           random_eps(0, 1),
           dist_sample(1.0 / p.param_theta_sample),
-          dist_refresh(1.0 / p.param_theta_refresh)
-    {};
+          dist_refresh(1.0 / p.param_theta_refresh) {};
 };
 
 namespace ecmc {
 void compute_list_staples(const GaugeField& field, const Geometry& geo, size_t site, int mu,
-                          std::array<SU3, 6>& list_staple, std::array<double, 6>& mask_staple);
+                          std::array<SU3, 6>& list_staple);
 #pragma omp declare simd
 inline void solve_reject_fast(double A, double B, double& gamma, double& reject, int epsilon) {
     // Utilisation de ternaires pour éviter les sauts (branches)
@@ -88,8 +87,7 @@ inline void solve_reject_fast(double A, double B, double& gamma, double& reject,
 }
 void solve_reject(double A, double B, double& gamma, double& reject, int epsilon);
 void compute_reject_angles_fast(const GaugeField& field, size_t site, int mu,
-                                const std::array<SU3, 6>& list_staple,
-                                const std::array<double, 6>& mask_staple, const SU3& R, int epsilon,
+                                const std::array<SU3, 6>& list_staple, const SU3& R, int epsilon,
                                 const double& beta, std::array<double, 6>& reject_angles,
                                 std::mt19937_64& rng);
 size_t selectVariable_norev(const std::array<double, 3>& probas, std::mt19937_64& rng);

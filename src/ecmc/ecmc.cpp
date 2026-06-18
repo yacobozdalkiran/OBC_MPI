@@ -10,41 +10,45 @@
 
 // Computes the list of the 6 staples around a gauge link
 void ecmc::compute_list_staples(const GaugeField& field, const Geometry& geo, size_t site, int mu,
-                                std::array<SU3, 6>& list_staple,
-                                std::array<double, 6>& mask_staples) {
-    size_t link_idx = site * 4 + mu;
+                                std::array<SU3, 6>& list_staple) {
     for (auto& staple : list_staple) {
         staple.setZero();
     }
-    mask_staples.fill(0.0);
-    // Forward staples
-    for (size_t i = geo.fwd_start[link_idx]; i < geo.fwd_start[link_idx + 1]; ++i) {
-        const auto& s = geo.fwd_staples_opt[i];
-        list_staple[s.j_local] = s.coeff * (field.view_link_const_off(s.off0) *
-                                            field.view_link_const_off(s.off1).adjoint() *
-                                            field.view_link_const_off(s.off2).adjoint());
-        mask_staples[s.j_local] = 1.0;
-    }
-
-    // Backward staples
-    for (size_t i = geo.bwd_start[link_idx]; i < geo.bwd_start[link_idx + 1]; ++i) {
-        const auto& s = geo.bwd_staples_opt[i];
-        list_staple[s.j_local] += s.coeff * (field.view_link_const_off(s.off0).adjoint() *
-                                             field.view_link_const_off(s.off1).adjoint() *
-                                             field.view_link_const_off(s.off2));
-        mask_staples[s.j_local] = 1.0;
+    size_t index = 0;
+    size_t x = site;                        // x
+    size_t xmu = geo.get_neigh(x, mu, up);  // x+mu
+    for (int nu = 0; nu < 4; nu++) {
+        if (nu == mu) {
+            continue;
+        }
+        if (geo.is_staple_valid(site, mu, index)) {
+            // Staple forward
+            size_t xnu = geo.get_neigh(x, nu, up);  // x+nu
+            const auto& U0 = field.view_link_const(xmu, nu);
+            const auto& U1 = field.view_link_const(xnu, mu);
+            const auto& U2 = field.view_link_const(x, nu);
+            list_staple[index] = U0 * (U2 * U1).adjoint();
+        }
+        if (geo.is_staple_valid(site, mu, index + 1)) {
+            // Staple backward
+            size_t xmunu = geo.get_neigh(xmu, nu, down);  // x+mu-nu
+            size_t xmnu = geo.get_neigh(x, nu, down);     // x-nu
+            auto V0 = field.view_link_const(xmunu, nu);
+            auto V1 = field.view_link_const(xmnu, mu);
+            auto V2 = field.view_link_const(xmnu, nu);
+            list_staple[index + 1] = (V1 * V0).adjoint() * V2;
+            index += 2;
+        }
     }
 }
 
 void ecmc::compute_reject_angles_fast(const GaugeField& field, size_t site, int mu,
-                                      const std::array<SU3, 6>& list_staple,
-                                      const std::array<double, 6>& mask_staple, const SU3& R,
+                                      const std::array<SU3, 6>& list_staple, const SU3& R,
                                       int epsilon, const double& beta,
                                       std::array<double, 6>& reject_angles, std::mt19937_64& rng) {
     static std::uniform_real_distribution<double> unif01_g(0.0, 1.0);
     const double beta_red = -(beta / 3.0);
     const SU3 T = R.adjoint() * field.view_link_const(site, mu);
-    const double invalid_reject = std::numeric_limits<double>::max();
     // 1. Pré-génération des gamma
     double gammas[6];
     for (int i = 0; i < 6; ++i) {
@@ -59,31 +63,37 @@ void ecmc::compute_reject_angles_fast(const GaugeField& field, size_t site, int 
         // Sinon, on accède directement aux données pour garantir la vectorisation
 
         // Calcul ligne 0
-        std::complex<double> m00 = T(0, 0) * list_staple[i](0, 0) + T(0, 1) * list_staple[i](1, 0) +
-                                   T(0, 2) * list_staple[i](2, 0);
-        std::complex<double> m01 = T(0, 0) * list_staple[i](0, 1) + T(0, 1) * list_staple[i](1, 1) +
-                                   T(0, 2) * list_staple[i](2, 1);
-        std::complex<double> m02 = T(0, 0) * list_staple[i](0, 2) + T(0, 1) * list_staple[i](1, 2) +
-                                   T(0, 2) * list_staple[i](2, 2);
+        if (list_staple[i].isZero()) {
+            reject_angles[i] = std::numeric_limits<double>::max();
+        } else {
+            std::complex<double> m00 = T(0, 0) * list_staple[i](0, 0) +
+                                       T(0, 1) * list_staple[i](1, 0) +
+                                       T(0, 2) * list_staple[i](2, 0);
+            std::complex<double> m01 = T(0, 0) * list_staple[i](0, 1) +
+                                       T(0, 1) * list_staple[i](1, 1) +
+                                       T(0, 2) * list_staple[i](2, 1);
+            std::complex<double> m02 = T(0, 0) * list_staple[i](0, 2) +
+                                       T(0, 1) * list_staple[i](1, 2) +
+                                       T(0, 2) * list_staple[i](2, 2);
 
-        // Calcul ligne 1
-        std::complex<double> m10 = T(1, 0) * list_staple[i](0, 0) + T(1, 1) * list_staple[i](1, 0) +
-                                   T(1, 2) * list_staple[i](2, 0);
-        std::complex<double> m11 = T(1, 0) * list_staple[i](0, 1) + T(1, 1) * list_staple[i](1, 1) +
-                                   T(1, 2) * list_staple[i](2, 1);
-        std::complex<double> m12 = T(1, 0) * list_staple[i](0, 2) + T(1, 1) * list_staple[i](1, 2) +
-                                   T(1, 2) * list_staple[i](2, 2);
+            // Calcul ligne 1
+            std::complex<double> m10 = T(1, 0) * list_staple[i](0, 0) +
+                                       T(1, 1) * list_staple[i](1, 0) +
+                                       T(1, 2) * list_staple[i](2, 0);
+            std::complex<double> m11 = T(1, 0) * list_staple[i](0, 1) +
+                                       T(1, 1) * list_staple[i](1, 1) +
+                                       T(1, 2) * list_staple[i](2, 1);
+            std::complex<double> m12 = T(1, 0) * list_staple[i](0, 2) +
+                                       T(1, 1) * list_staple[i](1, 2) +
+                                       T(1, 2) * list_staple[i](2, 2);
 
-        std::complex<double> P00 = m00 * R(0, 0) + m01 * R(1, 0) + m02 * R(2, 0);
-        std::complex<double> P11 = m10 * R(0, 1) + m11 * R(1, 1) + m12 * R(2, 1);
+            std::complex<double> P00 = m00 * R(0, 0) + m01 * R(1, 0) + m02 * R(2, 0);
+            std::complex<double> P11 = m10 * R(0, 1) + m11 * R(1, 1) + m12 * R(2, 1);
 
-        const double valid = mask_staple[i];
-        const double invalid = 1.0 - valid;
-        double A = (P00.real() + P11.real()) * beta_red * valid;
-        double B = (P11.imag() - P00.imag()) * beta_red * valid + invalid;
-        double reject = 0.0;
-        solve_reject_fast(A, B, gammas[i], reject, epsilon);
-        reject_angles[i] = valid * reject + invalid * invalid_reject;
+            double A = (P00.real() + P11.real()) * beta_red;
+            double B = (P11.imag() - P00.imag()) * beta_red;
+            solve_reject_fast(A, B, gammas[i], reject_angles[i], epsilon);
+        }
     }
 }
 
@@ -237,9 +247,9 @@ void ecmc::sample_persistant_norev(LocalChainState& state, Distributions& d, Gau
     std::array<double, 6> mask_staple;
 
     while (true) {
-        compute_list_staples(field, geo, site_current, mu_current, list_staple, mask_staple);
-        compute_reject_angles_fast(field, site_current, mu_current, list_staple, mask_staple, R,
-                                   epsilon_current, beta, reject_angles, rng);
+        compute_list_staples(field, geo, site_current, mu_current, list_staple);
+        compute_reject_angles_fast(field, site_current, mu_current, list_staple, R, epsilon_current,
+                                   beta, reject_angles, rng);
 
         int j = 0;
         double theta_reject = reject_angles[0];
