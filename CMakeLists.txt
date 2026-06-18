@@ -38,3 +38,70 @@ else()
             -fopenmp
     )
 endif()
+
+add_executable(test_ecmc src/bin/test_ecmc.cpp
+    src/su3/utils.cpp
+    src/gauge/GaugeField.cpp
+    src/geometry/Geometry.cpp
+    src/geometry/types.h
+    src/observables/observables.cpp
+    src/observables/observables_mpi.cpp
+    src/mpi/MpiTopology.cpp
+    src/mpi/HalosExchange.cpp
+    src/mpi/HalosShift.h
+    src/mpi/Shift.cpp
+    src/io/params.h
+    src/ecmc/ecmc.cpp
+)
+target_link_libraries(test_ecmc PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(test_ecmc PRIVATE
+            -O3
+            -xHost            
+            -qopenmp
+            -fp-model precise
+            -Wall -Wextra
+    )
+else()
+    target_compile_options(test_ecmc PRIVATE
+            -O3
+            #-ffast-math
+            -march=native
+            -Wall -Wextra -Wpedantic
+            -fopenmp
+    )
+endif()
+
+add_executable(test_hb src/bin/test_hb.cpp
+    src/su3/utils.cpp
+    src/gauge/GaugeField.cpp
+    src/geometry/Geometry.cpp
+    src/geometry/types.h
+    src/observables/observables.cpp
+    src/observables/observables_mpi.cpp
+    src/mpi/MpiTopology.cpp
+    src/mpi/HalosExchange.cpp
+    src/mpi/HalosShift.h
+    src/mpi/Shift.cpp
+    src/io/params.h
+    src/heatbath/heatbath.cpp
+    src/heatbath/heatbath_mpi.cpp
+)
+target_link_libraries(test_hb PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(test_hb PRIVATE
+            -O3
+            -xHost            
+            -qopenmp
+            -fp-model precise
+            -Wall -Wextra
+    )
+else()
+    target_compile_options(test_hb PRIVATE
+            -O3
+            #-ffast-math
+            -march=native
+            -Wall -Wextra -Wpedantic
+            -fopenmp
+    )
+endif()

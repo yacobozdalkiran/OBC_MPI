@@ -1,6 +1,6 @@
 #include <print>
 
-#include "../ecmc/ecmc.h"
+#include "../heatbath/heatbath_mpi.h"
 #include "../gauge/GaugeField.h"
 #include "../io/params.h"
 #include "../mpi/HalosExchange.h"
@@ -14,9 +14,13 @@ int main(int argc, char* argv[]) {
 
     // MPI
     mpi::MpiTopology topo(2);
-    // Rng
-    int seed = topo.rank * 1000;
-    std::mt19937_64 rng(seed);
+    // Vector rng for OpenMP
+    int n_threads = omp_get_max_threads();
+    std::vector<std::mt19937_64> rng(n_threads);
+    for (int i = 0; i < n_threads; i++) {
+        // On multiplie le rank par 1000 pour éviter tout recouvrement de séquence
+        rng[i].seed(123 + topo.rank * 1000 + i);
+    }
     // Geometry
     Geometry geo(10, 6);
     // Field
@@ -24,16 +28,12 @@ int main(int argc, char* argv[]) {
     // Halos for shifts
     HalosShift h(geo);
 
-    // ECMC
-    ECMCParams ep{.beta = 6.0,
-                  .N_samples = 10,
-                  .param_theta_sample = 6000,
-                  .param_theta_refresh = 800,
-                  .poisson = false,
-                  .epsilon_set = 0.15};
-    LocalChainState chain{};
-    chain.initialized = false;
-    Distributions d{ep};
+    // Heatbath
+    HbParams hp{
+        .beta=6.0,
+        .N_hits=1,
+        .N_sweeps=1,
+    };
 
     // Field hot start
     field.cold_start(geo);
@@ -45,9 +45,9 @@ int main(int argc, char* argv[]) {
 
     int N_shifts = 1000;
     for (int shifts = 0; shifts < N_shifts; shifts++) {
-        mpi::shift::random_shift(field, geo, h, topo, rng);
+        mpi::shift::random_shift(field, geo, h, topo, rng[0]);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        ecmc::sample_persistant_norev(chain, d, field, geo, ep, rng);
+        mpi::heatbathcb::samples(field, geo, hp, rng);
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
         plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 1, 4);
         if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
