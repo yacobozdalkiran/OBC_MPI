@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
     int seed = topo.rank * 1000;
     std::mt19937_64 rng(seed);
     // Geometry
-    Geometry geo(8, 4);
+    Geometry geo(10, 4);
     // Field
     GaugeField field(geo);
     // Halos for shifts
@@ -33,6 +33,11 @@ int main(int argc, char* argv[]) {
     LocalChainState chain{};
     chain.initialized = false;
     Distributions d{ep};
+
+    // Flow
+    GradientFlow flow(0.02, field, geo);
+    int N_steps_gf = 10;
+    int N_rk_steps = 50;
 
     // Field hot start
     field.cold_start(geo);
@@ -53,11 +58,31 @@ int main(int argc, char* argv[]) {
             std::print("Sweep time: {:.4f} seconds\n", end_time - start_time);
         }
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
-        std::pair<double,double> QE = mpi::observables::topo_q_e_clover_global(field, geo, topo);
+        std::pair<double, double> QE = mpi::observables::topo_q_e_clover_global(field, geo, topo);
+        plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 7);
+        if (topo.rank == 0) std::print("(Therm) Shift {}, <P> : {}\n", shifts, plaquette);
+        if (topo.rank == 0) std::print("(Therm) Shift {}, Q : {}\n", shifts, QE.first);
+        if (topo.rank == 0) std::print("(Therm) Shift {}, E : {}\n", shifts, QE.second);
+    }
+    for (int shifts = 0; shifts < N_shifts; shifts++) {
+        mpi::shift::random_shift(field, geo, h, topo, rng);
+        mpi::exchange::exchange_halos_cascade(field, geo, topo);
+        double start_time = MPI_Wtime();
+        ecmc::sample_persistant_norev(chain, d, field, geo, ep, rng);
+        double end_time = MPI_Wtime();
+        if (topo.rank == 0) {
+            std::print("Sweep time: {:.4f} seconds\n", end_time - start_time);
+        }
+        mpi::exchange::exchange_halos_cascade(field, geo, topo);
+        std::pair<double, double> QE = mpi::observables::topo_q_e_clover_global(field, geo, topo);
         plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 7);
         if (topo.rank == 0) std::print("Shift {}, <P> : {}\n", shifts, plaquette);
         if (topo.rank == 0) std::print("Shift {}, Q : {}\n", shifts, QE.first);
         if (topo.rank == 0) std::print("Shift {}, E : {}\n", shifts, QE.second);
+        if (shifts % 100 == 0) {
+            auto tQE = mpi::observables::topo_charge_flowed(field, geo, flow, topo, N_steps_gf,
+                                                            N_rk_steps);
+        }
     }
 
     MPI_Finalize();

@@ -19,6 +19,9 @@ add_executable(test_mpi src/bin/test_mpi.cpp
     src/mpi/HalosExchange.cpp
     src/mpi/HalosShift.h
     src/mpi/Shift.cpp
+    src/flow/gradient_flow.cpp
+    src/io/params.h
+    src/io/io.cpp
 )
 target_link_libraries(test_mpi PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
@@ -52,6 +55,8 @@ add_executable(test_ecmc src/bin/test_ecmc.cpp
     src/mpi/Shift.cpp
     src/io/params.h
     src/ecmc/ecmc.cpp
+    src/flow/gradient_flow.cpp
+    src/io/io.cpp
 )
 target_link_libraries(test_ecmc PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
@@ -86,6 +91,8 @@ add_executable(test_hb src/bin/test_hb.cpp
     src/io/params.h
     src/heatbath/heatbath.cpp
     src/heatbath/heatbath_mpi.cpp
+    src/flow/gradient_flow.cpp
+    src/io/io.cpp
 )
 target_link_libraries(test_hb PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")

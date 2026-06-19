@@ -1,0 +1,157 @@
+//
+// Created by ozdalkiran-l on 1/29/26.
+//
+
+#include "gradient_flow.h"
+
+#include <omp.h>
+
+#include "../mpi/HalosExchange.h"
+#include "../su3/utils.h"
+
+GradientFlow::GradientFlow(double epsilon_, const GaugeField& field, const Geometry& geo)
+    : epsilon(epsilon_), field_c(field), force_0(field), force_1(field), geo_p(&geo) {}
+
+// Updates the force field according to staples and links of field_c, into force0 or force1
+// depending on i
+void GradientFlow::compute_force(int i) {
+#pragma omp parallel for collapse(4)
+    for (int t = 0; t <= geo_p->T - 1; t++) {
+        for (int z = 1; z <= geo_p->L_int; z++) {
+            for (int y = 1; y <= geo_p->L_int; y++) {
+                for (int x = 1; x <= geo_p->L_int; x++) {
+                    SU3 staple{};
+                    SU3 tmp{};
+                    size_t site = geo_p->index(x, y, z, t);
+                    for (int mu = 0; mu < 4; mu++) {
+                        if (t == geo_p->T - 1 and mu == 3) continue;
+                        field_c.compute_staple(*geo_p, site, mu, staple);
+                        tmp = -1.0 * field_c.view_link_const(site, mu) * staple;
+                        proj_lie_su3(tmp);
+                        if (i == 0) force_0.view_link(site, mu) = tmp;
+                        if (i == 1) force_1.view_link(site, mu) = tmp;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// First RK3 step
+void GradientFlow::compute_w1() {
+#pragma omp parallel for collapse(4)
+    for (int t = 0; t <= geo_p->T - 1; t++) {
+        for (int z = 1; z <= geo_p->L_int; z++) {
+            for (int y = 1; y <= geo_p->L_int; y++) {
+                for (int x = 1; x <= geo_p->L_int; x++) {
+                    SU3 tmp{};
+                    size_t site = geo_p->index(x, y, z, t);
+                    for (int mu = 0; mu < 4; mu++) {
+                        if (t == geo_p->T - 1 and mu == 3) continue;
+                        if ((t == 0 or t == geo_p->T - 1) and mu < 3)
+                            tmp = exp_su3_luscher(force_0.view_link_const(site, mu),
+                                                  2 * 0.25 * epsilon) *
+                                  field_c.view_link_const(site, mu);
+                        else
+                            tmp =
+                                exp_su3_luscher(force_0.view_link_const(site, mu), 0.25 * epsilon) *
+                                field_c.view_link_const(site, mu);
+                        field_c.view_link(site, mu) = tmp;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Second RK3 step
+void GradientFlow::compute_w2() {
+#pragma omp parallel for collapse(4)
+    for (int t = 0; t <= geo_p->T - 1; t++) {
+        for (int z = 1; z <= geo_p->L_int; z++) {
+            for (int y = 1; y <= geo_p->L_int; y++) {
+                for (int x = 1; x <= geo_p->L_int; x++) {
+                    SU3 tmp{};
+                    SU3 Z{};
+                    size_t site = geo_p->index(x, y, z, t);
+                    for (int mu = 0; mu < 4; mu++) {
+                        if (t == geo_p->T - 1 and mu == 3) continue;
+                        if ((t == 0 or t == geo_p->T - 1) and mu < 3)
+                            Z = (8.0 / 9.0) * 2 * epsilon * force_1.view_link_const(site, mu) -
+                                (17.0 / 36.0) * 2 * epsilon * force_0.view_link_const(site, mu);
+                        else
+                            Z = (8.0 / 9.0) * epsilon * force_1.view_link_const(site, mu) -
+                                (17.0 / 36.0) * epsilon * force_0.view_link_const(site, mu);
+                        tmp = exp_su3_luscher(Z, 1.0) * field_c.view_link_const(site, mu);
+                        field_c.view_link(site, mu) = tmp;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Replacement Z0 = 8/9 Z_1 -17/36 Z0 for w3
+void GradientFlow::replace_force_0() {
+#pragma omp parallel for collapse(4)
+    for (int t = 0; t <= geo_p->T - 1; t++) {
+        for (int z = 1; z <= geo_p->L_int; z++) {
+            for (int y = 1; y <= geo_p->L_int; y++) {
+                for (int x = 1; x <= geo_p->L_int; x++) {
+                    SU3 tmp{};
+                    size_t site = geo_p->index(x, y, z, t);
+                    for (int mu = 0; mu < 4; mu++) {
+                        if (t == geo_p->T - 1 and mu == 3) continue;
+                        tmp = 8.0 / 9.0 * force_1.view_link_const(site, mu) -
+                              (17.0 / 36.0) * force_0.view_link_const(site, mu);
+                        force_0.view_link(site, mu) = tmp;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Third RK3 step
+void GradientFlow::compute_w3() {
+#pragma omp parallel for collapse(4)
+    for (int t = 0; t <= geo_p->T - 1; t++) {
+        for (int z = 1; z <= geo_p->L_int; z++) {
+            for (int y = 1; y <= geo_p->L_int; y++) {
+                for (int x = 1; x <= geo_p->L_int; x++) {
+                    SU3 tmp{};
+                    SU3 Z{};
+                    size_t site = geo_p->index(x, y, z, t);
+                    for (int mu = 0; mu < 4; mu++) {
+                        if (t == geo_p->T - 1 and mu == 3) continue;
+                        if ((t == 0 or t == geo_p->T - 1) and mu < 3)
+                            Z = 0.75 * 2 * epsilon * force_1.view_link_const(site, mu) -
+                                2 * epsilon * force_0.view_link_const(site, mu);
+                        else
+                            Z = 0.75 * epsilon * force_1.view_link_const(site, mu) -
+                                epsilon * force_0.view_link_const(site, mu);
+                        tmp = exp_su3_luscher(Z, 1.0) * field_c.view_link_const(site, mu);
+                        field_c.view_link(site, mu) = tmp;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Performs a full RK3 step, the field updated of epsilon with correct halos is in field_c
+void GradientFlow::rk3_step(mpi::MpiTopology& topo) {
+    compute_force(0);
+    compute_w1();
+    mpi::exchange::exchange_halos_cascade(field_c, *geo_p, topo);
+    compute_force(1);
+    compute_w2();
+    mpi::exchange::exchange_halos_cascade(field_c, *geo_p, topo);
+    replace_force_0();
+    compute_force(1);
+    compute_w3();
+    mpi::exchange::exchange_halos_cascade(field_c, *geo_p, topo);
+}
+
+// Copies the content of field into field_c
+void GradientFlow::copy(const GaugeField& field) { field_c = field; };

@@ -3,6 +3,8 @@
 #include <omp.h>
 #include <iostream>
 
+#include "observables.h"
+#include "../io/io.h"
 // Computation of global mean plaquette with halos embedded in field (needs field halos exchanges
 // first)
 double mpi::observables::mean_plaquette_global(GaugeField& field, const Geometry& geo,
@@ -121,4 +123,34 @@ std::pair<double, double> mpi::observables::topo_q_e_clover_global(const GaugeFi
 
     // On retourne {Charge Totale, Densité d'énergie moyenne globale}
     return {total_q, total_e / total_volume};
+};
+
+// Returns t, Q and E for the specified gradient flow parameters
+std::vector<double> mpi::observables::topo_charge_flowed(GaugeField& field, const Geometry& geo,
+                                                         GradientFlow& gf, mpi::MpiTopology& topo,
+                                                         int N_steps_gf, int N_rk_steps) {
+    // mpi::exchange::exchange_halos_cascade(field, geo, topo);
+    std::vector<double> tQE(3 * N_steps_gf);
+    gf.copy(field);
+    double t = 0.0;
+    int p = 6;
+    int pt = 2;
+    for (int steps = 0; steps < N_steps_gf; steps++) {
+        auto qe = topo_q_e_clover_global(gf.field_c, geo, topo);
+        tQE[3 * steps] = t;
+        tQE[3 * steps + 1] = qe.first;
+        tQE[3 * steps + 2] = qe.second;
+        if (topo.rank == 0) {
+            std::cout << "n = " << steps << ", t = " << io::format_double(t, pt)
+                      << ", Q = " << io::format_double(qe.first, p)
+                      << ", t²E = " << io::format_double(t * t * qe.second, p) << "\n";
+        }
+        if (steps != N_steps_gf - 1) {
+            for (int rk_steps = 0; rk_steps < N_rk_steps; rk_steps++) {
+                gf.rk3_step(topo);
+                t += gf.epsilon;
+            }
+        }
+    }
+    return tQE;
 };
