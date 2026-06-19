@@ -85,7 +85,7 @@ std::pair<double, double> mpi::observables::topo_q_e_clover(const GaugeField& fi
     double q = 0.0;
     double e = 0.0;
 #pragma omp parallel for reduction(+ : q, e) collapse(4)
-    for (int t = 1; t <= geo.L_int; t++) {
+    for (int t = 1; t <= geo.T-2; t++) {
         for (int z = 1; z <= geo.L_int; z++) {
             for (int y = 1; y <= geo.L_int; y++) {
                 for (int x = 1; x <= geo.L_int; x++) {

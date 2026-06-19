@@ -53,8 +53,11 @@ int main(int argc, char* argv[]) {
             std::print("Sweep time: {:.4f} seconds\n", end_time - start_time);
         }
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
+        std::pair<double,double> QE = mpi::observables::topo_q_e_clover_global(field, geo, topo);
         plaquette = mpi::observables::mean_plaquette_global(field, geo, topo, 0, 7);
-        if (topo.rank == 0) std::print("Shift {}, plaquette : {}\n", shifts, plaquette);
+        if (topo.rank == 0) std::print("Shift {}, <P> : {}\n", shifts, plaquette);
+        if (topo.rank == 0) std::print("Shift {}, Q : {}\n", shifts, QE.first);
+        if (topo.rank == 0) std::print("Shift {}, E : {}\n", shifts, QE.second);
     }
 
     MPI_Finalize();
