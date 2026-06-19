@@ -63,10 +63,11 @@ void ecmc::compute_reject_angles_fast(const GaugeField& field, size_t site, int 
         // Eigen peut être utilisé à l'intérieur de omp simd si les expressions sont simples
         // Sinon, on accède directement aux données pour garantir la vectorisation
 
-        // Calcul ligne 0
+        //Si la staple est invalide -> rejet infini (on ne lift jamais dessus)
         if (list_staple[i].isZero()) {
             reject_angles[i] = std::numeric_limits<double>::max();
         } else {
+            // Calcul ligne 0
             std::complex<double> m00 = T(0, 0) * list_staple[i](0, 0) +
                                        T(0, 1) * list_staple[i](1, 0) +
                                        T(0, 2) * list_staple[i](2, 0);
