@@ -57,7 +57,7 @@ void mpi::heatbathcb::sweep(GaugeField& field, const Geometry& geo, double beta,
     }
 }
 
-// Generates Heatbath samples according to input parameters
+// Generates Heatbath samples according to input parameters, evend/odd checkboarding
 void mpi::heatbathcb::sample(GaugeField& field, const Geometry& geo, const HbParams& params,
                              std::vector<std::mt19937_64>& rng) {
     // Update

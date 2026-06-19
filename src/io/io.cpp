@@ -390,15 +390,14 @@ void io::save_params(const RunParamsHbCB& rp, const std::string& filename,
     file << "\n#########################################################\n\n";
 
     file << "# Lattice params\n";
+    file << "T=" << rp.T << "\n";
     file << "L_core=" << rp.L_core << "\n";
     file << "n_core_dims=" << rp.n_core_dims << "\n";
     file << "cold_start=" << rp.cold_start << "\n\n";
 
     file << "# Run params\n";
     file << "seed=" << rp.seed << "\n";
-    file << "N_shift_therm = " << rp.N_therm << "\n";
-    file << "N_shift =" << rp.N_shift << "\n";
-    file << "N_switch_eo=" << rp.N_switch_eo << "\n\n";
+    file << "N_shift =" << rp.N_shift << "\n\n";
 
     file << "# Heatbath params\n";
     file << "beta = " << rp.hp.beta << "\n";
@@ -406,7 +405,9 @@ void io::save_params(const RunParamsHbCB& rp, const std::string& filename,
     file << "N_hits = " << rp.hp.N_hits << "\n\n";
 
     file << "# Plaquette params\n";
-    file << "N_shift_plaquette = " << rp.N_shift_plaquette << "\n\n";
+    file << "N_shift_plaquette = " << rp.N_shift_plaquette << "\n";
+    file << "T_min=" << rp.T_min << "\n";
+    file << "T_max=" << rp.T_max << "\n\n";
 
     file << "# Topo params\n";
     file << "topo = " << rp.topo << "\n";
@@ -449,28 +450,29 @@ void io::load_params(const std::string& filename, RunParamsECB& rp) {
     }
 
     // Lattice params
+    if (config.count("T")) rp.T= std::stoi(config["T"]);
     if (config.count("L_core")) rp.L_core = std::stoi(config["L_core"]);
     if (config.count("n_core_dims")) rp.n_core_dims = std::stoi(config["n_core_dims"]);
     if (config.count("cold_start")) rp.cold_start = (config["cold_start"] == "true");
+
     if (config.count("seed")) rp.seed = std::stoi(config["seed"]);
-    if (config.count("N_switch_eo")) rp.N_switch_eo = std::stoi(config["N_switch_eo"]);
     if (config.count("N_shift")) rp.N_shift = std::stoi(config["N_shift"]);
 
     // ECMC params
     if (config.count("beta")) rp.ecmc_params.beta = std::stod(config["beta"]);
     // 1 sample each run bc frozen links increase artificially the correlation
-    rp.ecmc_params.N_samples = 1;
     if (config.count("param_theta_sample"))
         rp.ecmc_params.param_theta_sample = std::stod(config["param_theta_sample"]);
     if (config.count("param_theta_refresh"))
         rp.ecmc_params.param_theta_refresh = std::stod(config["param_theta_refresh"]);
     if (config.count("poisson")) rp.ecmc_params.poisson = (config["poisson"] == "true");
-    if (config.count("epsilon_set")) rp.ecmc_params.epsilon_set = std::stod(config["epsilon_set"]);
 
     if (config.count("N_shift_plaquette"))
         rp.N_shift_plaquette = std::stoi(config["N_shift_plaquette"]);
+    if (config.count("T_min")) rp.T_min= std::stoi(config["T_min"]);
+    if (config.count("T_max")) rp.T_max= std::stoi(config["T_max"]);
+
     // Run and topo params
-    if (config.count("N_shift_therm")) rp.N_therm = std::stoi(config["N_shift_therm"]);
     if (config.count("topo")) rp.topo = (config["topo"] == "true");
     if (config.count("N_shift_topo")) rp.N_shift_topo = std::stoi(config["N_shift_topo"]);
     if (config.count("N_steps_gf")) rp.N_steps_gf = std::stoi(config["N_steps_gf"]);
@@ -503,22 +505,25 @@ void io::load_params(const std::string& filename, RunParamsHbCB& rp) {
     }
 
     // Lattice params
+    if (config.count("T")) rp.T= std::stoi(config["T"]);
     if (config.count("L_core")) rp.L_core = std::stoi(config["L_core"]);
     if (config.count("n_core_dims")) rp.n_core_dims = std::stoi(config["n_core_dims"]);
     if (config.count("cold_start")) rp.cold_start = (config["cold_start"] == "true");
+
     if (config.count("seed")) rp.seed = std::stoi(config["seed"]);
-    if (config.count("N_switch_eo")) rp.N_switch_eo = std::stoi(config["N_switch_eo"]);
     if (config.count("N_shift")) rp.N_shift = std::stoi(config["N_shift"]);
 
     // Hb params
     if (config.count("beta")) rp.hp.beta = std::stod(config["beta"]);
     if (config.count("N_sweeps")) rp.hp.N_sweeps = std::stoi(config["N_sweeps"]);
     if (config.count("N_hits")) rp.hp.N_hits = std::stoi(config["N_hits"]);
+
     if (config.count("N_shift_plaquette"))
         rp.N_shift_plaquette = std::stoi(config["N_shift_plaquette"]);
+    if (config.count("T_min")) rp.T_min= std::stoi(config["T_min"]);
+    if (config.count("T_max")) rp.T_max= std::stoi(config["T_max"]);
 
     // Run and topo params
-    if (config.count("N_shift_therm")) rp.N_therm = std::stoi(config["N_shift_therm"]);
     if (config.count("topo")) rp.topo = (config["topo"] == "true");
     if (config.count("N_shift_topo")) rp.N_shift_topo = std::stoi(config["N_shift_topo"]);
     if (config.count("N_steps_gf")) rp.N_steps_gf = std::stoi(config["N_steps_gf"]);
@@ -535,17 +540,16 @@ void io::load_params(const std::string& filename, RunParamsHbCB& rp) {
 void print_parameters(const RunParamsHbCB& rp, const mpi::MpiTopology& topo) {
     if (topo.rank == 0) {
         std::cout << "==========================================" << std::endl;
-        std::cout << "Heatbath - Checkboard" << std::endl;
+        std::cout << "Heatbath - OBC" << std::endl;
         std::cout << "==========================================" << std::endl;
         std::cout << "Run name : " + rp.run_name << "\n";
         std::cout << "---Lattice params---\n";
-        std::cout << "Total lattice size : " << rp.L_core * rp.n_core_dims << "^4\n";
-        std::cout << "Local lattice size : " << rp.L_core << "^4\n\n";
+        std::cout << "Total lattice size : " << rp.T << "x" << rp.L_core * rp.n_core_dims << "^3\n";
+        std::cout << "Local lattice size : " << rp.T << "x" << rp.L_core << "^3\n";
 
         std::cout << "---Run params---\n";
         std::cout << "Initial seed : " << rp.seed << "\n";
         std::cout << "Number of shifts : " << rp.N_shift << "\n";
-        std::cout << "Number of e/o switchs per shift : " << rp.N_switch_eo << "\n";
         std::cout << "Save each : " << rp.save_each_shifts << " shifts\n\n";
 
         std::cout << "---Heatbath params---\n";
@@ -555,6 +559,7 @@ void print_parameters(const RunParamsHbCB& rp, const mpi::MpiTopology& topo) {
 
         std::cout << "---Measures params---\n";
         std::cout << "Number of <P> samples : " << rp.N_shift / rp.N_shift_plaquette << "\n";
+        std::cout << "Interval plaquette : T = [" << rp.T_min << ',' << rp.T_max << "]\n";
         std::cout << "Measure <P> each : " << rp.N_shift_plaquette << " shifts\n";
         std::cout << "Measure topo : " << (rp.topo ? "Yes" : "No") << "\n";
         if (rp.topo) {
@@ -595,15 +600,20 @@ bool io::read_params(RunParamsHbCB& params, int rank, const std::string& input) 
     }
     // 1. Diffusion des paramètres numériques (Lattice + Run + Topo)
     // On diffuse les blocs un par un pour plus de clarté et de sécurité
+    MPI_Bcast(&params.T, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.L_core, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.n_core_dims, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.cold_start, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.N_switch_eo, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
     MPI_Bcast(&params.N_shift, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    
+    MPI_Bcast(&params.N_shift_plaquette, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.T_min, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.T_max, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
     MPI_Bcast(&params.topo, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift_topo, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.N_shift_plaquette, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_steps_gf, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_rk_steps, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.save_each_shifts, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -683,28 +693,27 @@ bool io::read_params(RunParamsHbCB& params, int rank, const std::string& input) 
 void print_parameters(const RunParamsECB& rp, const mpi::MpiTopology& topo) {
     if (topo.rank == 0) {
         std::cout << "==========================================" << std::endl;
-        std::cout << "ECMC - Checkboard" << std::endl;
+        std::cout << "ECMC - OBC" << std::endl;
         std::cout << "==========================================" << std::endl;
         std::cout << "Run name : " + rp.run_name << "\n";
         std::cout << "---Lattice params---\n";
-        std::cout << "Total lattice size : " << rp.L_core * rp.n_core_dims << "^4\n";
-        std::cout << "Local lattice size : " << rp.L_core << "^4\n\n";
+        std::cout << "Total lattice size : " << rp.T << "x" << rp.L_core * rp.n_core_dims << "^3\n";
+        std::cout << "Local lattice size : " << rp.T << "x" << rp.L_core << "^3\n";
 
         std::cout << "---Run params---\n";
         std::cout << "Initial seed : " << rp.seed << "\n";
         std::cout << "Number of shifts : " << rp.N_shift << "\n";
-        std::cout << "Number of e/o switchs per shift : " << rp.N_switch_eo << "\n";
         std::cout << "Save each : " << rp.save_each_shifts << " shifts\n\n";
 
         std::cout << "---ECMC params---\n";
         std::cout << "Beta : " << rp.ecmc_params.beta << "\n";
         std::cout << "Theta sample : " << rp.ecmc_params.param_theta_sample << "\n";
         std::cout << "Theta refresh : " << rp.ecmc_params.param_theta_refresh << "\n";
-        std::cout << "Epsilon set : " << rp.ecmc_params.epsilon_set << "\n";
         std::cout << "Poisson law : " << (rp.ecmc_params.poisson ? "Yes" : "No") << "\n\n";
 
         std::cout << "---Measures params---\n";
         std::cout << "Number of <P> samples : " << rp.N_shift / rp.N_shift_plaquette << "\n";
+        std::cout << "Interval plaquette : T = [" << rp.T_min << ',' << rp.T_max << "]\n";
         std::cout << "Measure <P> each : " << rp.N_shift_plaquette << " shifts\n";
         std::cout << "Measure topo : " << (rp.topo ? "Yes" : "No") << "\n";
         if (rp.topo) {
@@ -744,25 +753,25 @@ void io::save_params(const RunParamsECB& rp, const std::string& filename,
     file << "\n#########################################################\n\n";
 
     file << "# Lattice params\n";
+    file << "T= " << rp.T << "\n";
     file << "L_core = " << rp.L_core << "\n";
     file << "n_core_dims = " << rp.n_core_dims << "\n";
     file << "cold_start = " << rp.cold_start << "\n\n";
 
     file << "# Run params\n";
     file << "seed = " << rp.seed << "\n";
-    file << "N_shift_therm = " << rp.N_therm << "\n";
-    file << "N_shift = " << rp.N_shift << "\n";
-    file << "N_switch_eo = " << rp.N_switch_eo << "\n\n";
+    file << "N_shift = " << rp.N_shift << "\n\n";
 
     file << "# ECMC params\n";
     file << "beta = " << rp.ecmc_params.beta << "\n";
     file << "theta_sample = " << rp.ecmc_params.param_theta_sample << "\n";
     file << "theta_refresh = " << rp.ecmc_params.param_theta_refresh << "\n";
-    file << "epsilon_set = " << rp.ecmc_params.epsilon_set << "\n";
     file << "poisson = " << rp.ecmc_params.poisson << "\n\n";
 
     file << "# Plaquette params\n";
-    file << "N_shift_plaquette = " << rp.N_shift_plaquette << "\n\n";
+    file << "N_shift_plaquette = " << rp.N_shift_plaquette << "\n";
+    file << "T_min=" << rp.T_min << "\n";
+    file << "T_max=" << rp.T_max << "\n\n";
 
     file << "# Topo params\n";
     file << "topo = " << rp.topo << "\n";
@@ -789,15 +798,19 @@ bool io::read_params(RunParamsECB& params, int rank, const std::string& input) {
     }
 
     // 1. Diffusion des paramètres de base (Lattice + Run + Topo)
+    MPI_Bcast(&params.T, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.L_core, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.n_core_dims, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.cold_start, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+
     MPI_Bcast(&params.seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.N_switch_eo, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.N_therm, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.topo, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
+
     MPI_Bcast(&params.N_shift_plaquette, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.T_min, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.T_max, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    MPI_Bcast(&params.topo, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift_topo, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_steps_gf, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_rk_steps, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -805,11 +818,9 @@ bool io::read_params(RunParamsECB& params, int rank, const std::string& input) {
 
     // 2. Diffusion du bloc ECMCParams (ecmc_params)
     MPI_Bcast(&params.ecmc_params.beta, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.ecmc_params.N_samples, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.ecmc_params.param_theta_sample, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.ecmc_params.param_theta_refresh, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.ecmc_params.poisson, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.ecmc_params.epsilon_set, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     // 3. Diffusion de la std::string (run_name)
     int name_len;

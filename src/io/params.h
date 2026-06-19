@@ -11,7 +11,6 @@ struct ECMCParams {
     double param_theta_sample = 100;
     double param_theta_refresh= 50;
     bool poisson = false;
-    double epsilon_set = 0.15;
 };
 
 struct HbParams {
@@ -61,14 +60,21 @@ struct RunParamsECB {
     int L_core = 6;
     int n_core_dims = 2;
     bool cold_start = true;
+
     int seed = 123;
     int N_shift = 2;           // Number of shifts
+                               
     ECMCParams ecmc_params{};  // Params of the ECMC for each even/odd update
-    bool topo = true;
+                               //
     int N_shift_plaquette = 2;  // Measure plaquette every N_shift_plaquette_shift
+    int T_min = 0;
+    int T_max = T-1;
+    
+    bool topo = true;
     int N_shift_topo = 10;      // Measure topo charge every N_shift_topo shift
     int N_steps_gf = 10;
     int N_rk_steps = 40;
+    
     std::string run_name = "c";
     std::string run_dir = "data";
     int save_each_shifts = 2;  // save confs/measures/seed each
@@ -80,14 +86,21 @@ struct RunParamsHbCB {
     int L_core = 6;
     int n_core_dims = 2;
     bool cold_start = true;
-    int N_shift = 2;      // Number of shifts
+    
     int seed = 123;
+    int N_shift = 2;      // Number of shifts
+    
     HbParams hp{};      // Hb params for each even/odd update
-    bool topo = true;
+    
     int N_shift_plaquette = 2;  // Measure plaquette every N_shift_plaquette_shift
+    int T_min = 0;
+    int T_max = T-1;
+
+    bool topo = true;
     int N_shift_topo = 10;      // Measure topo charge every N_shift_topo shift
     int N_steps_gf = 10;
     int N_rk_steps = 40;
+    
     std::string run_name = "c";
     std::string run_dir = "data";
     int save_each_shifts = 2;  // save confs/measures/seed each
