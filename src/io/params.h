@@ -56,7 +56,7 @@ struct RunParamsHb {
 
 //Main
 struct RunParamsECB {
-    int T;
+    int T = 8;
     int L_core = 6;
     int n_core_dims = 2;
     bool cold_start = true;
@@ -82,7 +82,7 @@ struct RunParamsECB {
 
 //Main
 struct RunParamsHbCB {
-    int T;
+    int T=8;
     int L_core = 6;
     int n_core_dims = 2;
     bool cold_start = true;

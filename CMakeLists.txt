@@ -155,3 +155,79 @@ else()
             -fopenmp
     )
 endif()
+
+
+#===================EXECS==========================
+add_executable(gauge_ecmc_mpi_norev src/bin/gauge_ecmc_mpi_norev.cpp
+    src/su3/utils.cpp
+    src/gauge/GaugeField.cpp
+    src/geometry/Geometry.cpp
+    src/geometry/types.h
+    src/observables/observables.cpp
+    src/observables/observables_mpi.cpp
+    src/mpi/MpiTopology.cpp
+    src/mpi/HalosExchange.cpp
+    src/mpi/HalosShift.h
+    src/mpi/Shift.cpp
+    src/io/params.h
+    src/ecmc/ecmc.cpp
+    src/flow/gradient_flow.cpp
+    src/io/io.cpp
+    src/io/ildg.cpp
+)
+target_link_libraries(gauge_ecmc_mpi_norev PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(gauge_ecmc_mpi_norev PRIVATE
+            -O3
+            -xHost            
+            -qopenmp
+            -fp-model precise
+            -Wall -Wextra
+    )
+else()
+    target_compile_options(gauge_ecmc_mpi_norev PRIVATE
+            -O3
+            #-ffast-math
+            -march=native
+            -Wall -Wextra -Wpedantic
+            -fopenmp
+    )
+endif()
+
+
+add_executable(gauge_hb_mpi src/bin/gauge_hb_mpi.cpp
+    src/su3/utils.cpp
+    src/gauge/GaugeField.cpp
+    src/geometry/Geometry.cpp
+    src/geometry/types.h
+    src/observables/observables.cpp
+    src/observables/observables_mpi.cpp
+    src/mpi/MpiTopology.cpp
+    src/mpi/HalosExchange.cpp
+    src/mpi/HalosShift.h
+    src/mpi/Shift.cpp
+    src/io/params.h
+    src/heatbath/heatbath.cpp
+    src/heatbath/heatbath_mpi.cpp
+    src/flow/gradient_flow.cpp
+    src/io/io.cpp
+    src/io/ildg.cpp
+)
+target_link_libraries(gauge_hb_mpi PRIVATE MPI::MPI_CXX Eigen3::Eigen lime OpenMP::OpenMP_CXX)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
+    target_compile_options(gauge_hb_mpi PRIVATE
+            -O3
+            -xHost            
+            -qopenmp
+            -fp-model precise
+            -Wall -Wextra
+    )
+else()
+    target_compile_options(gauge_hb_mpi PRIVATE
+            -O3
+            #-ffast-math
+            -march=native
+            -Wall -Wextra -Wpedantic
+            -fopenmp
+    )
+endif()

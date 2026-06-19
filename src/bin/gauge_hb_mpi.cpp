@@ -24,8 +24,7 @@ void generate_hb_cb(const RunParamsHbCB& rp, bool existing) {
     mpi::MpiTopology topo(n_core_dims);
 
     // Lattice creation + RNG
-    int L = rp.L_core;
-    GeometryCB geo(L);
+    Geometry geo(rp.T, rp.L_core);
     GaugeField field(geo);
     // Vector rng for OpenMP
     int n_threads = omp_get_max_threads();
@@ -118,7 +117,7 @@ void generate_hb_cb(const RunParamsHbCB& rp, bool existing) {
         MPI_Barrier(MPI_COMM_WORLD);
         double start_time_sweep = MPI_Wtime();
         mpi::shift::random_shift(field, geo, halo_shift, topo, rng[0]);
-        mpi::heatbathcb::samples(field, geo, hp, rng);
+        mpi::heatbathcb::sample(field, geo, hp, rng);
         if (i % N_unit == 0 and i > 0) {
             field.project_field_su3(geo);
         }
@@ -135,7 +134,7 @@ void generate_hb_cb(const RunParamsHbCB& rp, bool existing) {
         if (i % rp.N_shift_plaquette == 0 and (i > 0 or !existing)) {
             MPI_Barrier(MPI_COMM_WORLD);
             double start_time_plaquette = MPI_Wtime();
-            double p = mpi::observables::mean_plaquette_global(field, geo, topo);
+            double p = mpi::observables::mean_plaquette_global(field, geo, topo, rp.T_min, rp.T_max);
             MPI_Barrier(MPI_COMM_WORLD);
             double end_time_plaquette = MPI_Wtime();
             if (topo.rank == 0) {

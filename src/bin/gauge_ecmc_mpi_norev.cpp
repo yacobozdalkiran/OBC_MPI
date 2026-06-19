@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <iostream>
 
-#include "../ecmc/ecmc_mpi_cb.h"
+#include "../ecmc/ecmc.h"
 #include "../flow/gradient_flow.h"
 #include "../gauge/GaugeField.h"
 #include "../io/ildg.h"
@@ -24,8 +24,7 @@ void generate_ecmc_cb(const RunParamsECB& rp, bool existing) {
     mpi::MpiTopology topo(n_core_dims);
 
     // Lattice creation + RNG
-    int L = rp.L_core;
-    GeometryCB geo(L);
+    Geometry geo(rp.T, rp.L_core);
     GaugeField field(geo);
     int n_threads = omp_get_max_threads();
     std::vector<std::mt19937_64> rng(n_threads);
@@ -129,7 +128,7 @@ void generate_ecmc_cb(const RunParamsECB& rp, bool existing) {
         // New chain
         state.initialized = false;
 
-        mpi::ecmccb::sample_persistant_norev(state, d, field, geo, ep, rng[0]);
+        ecmc::sample_persistant_norev(state, d, field, geo, ep, rng[0]);
         if (i % N_unit == 0 and i > 0) {
             field.project_field_su3(geo);
         }
@@ -145,7 +144,7 @@ void generate_ecmc_cb(const RunParamsECB& rp, bool existing) {
         if ((i % rp.N_shift_plaquette == 0)) {
             MPI_Barrier(MPI_COMM_WORLD);
             double start_time_plaquette = MPI_Wtime();
-            double p = mpi::observables::mean_plaquette_global(field, geo, topo);
+            double p = mpi::observables::mean_plaquette_global(field, geo, topo, rp.T_min, rp.T_max);
             MPI_Barrier(MPI_COMM_WORLD);
             double end_time_plaquette = MPI_Wtime();
             if (topo.rank == 0) {
