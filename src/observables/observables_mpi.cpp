@@ -56,3 +56,69 @@ SU3 mpi::observables::clover_site(const GaugeField& field, const Geometry& geo, 
     F *= 0.125;
     return F;
 }
+
+// Computes the local clover topological charge and energy at site
+std::pair<double, double> mpi::observables::local_q_e_clover(const GaugeField& field,
+                                                             const Geometry& geo, size_t site) {
+    SU3 F01 = clover_site(field, geo, site, 0, 1);
+    SU3 F02 = clover_site(field, geo, site, 0, 2);
+    SU3 F03 = clover_site(field, geo, site, 0, 3);
+    SU3 F12 = clover_site(field, geo, site, 1, 2);
+    SU3 F13 = clover_site(field, geo, site, 1, 3);
+    SU3 F23 = clover_site(field, geo, site, 2, 3);
+
+    // 2. On utilise la forme explicite de epsilon_{mu nu rho sigma}
+    // Q ~ Tr(F01*F23 - F02*F13 + F03*F12)
+    double q = (F01 * F23).trace().real() - (F02 * F13).trace().real() + (F03 * F12).trace().real();
+
+    // On calcule aussi l'énergie locale
+    double e_local = 0.5 * (F01.squaredNorm() + F02.squaredNorm() + F03.squaredNorm() +
+                            F12.squaredNorm() + F13.squaredNorm() + F23.squaredNorm());
+    // 3. Le facteur global est 1/(4*pi^2) car le 1/32 a été absorbé
+    // par les combinaisons et le facteur 1/8 de F.
+    return {q * (1.0 / (4.0 * M_PI * M_PI)), e_local};
+}
+
+// Return the clover topological charge and energy density
+std::pair<double, double> mpi::observables::topo_q_e_clover(const GaugeField& field,
+                                                            const Geometry& geo) {
+    double q = 0.0;
+    double e = 0.0;
+#pragma omp parallel for reduction(+ : q, e) collapse(4)
+    for (int t = 1; t <= geo.L_int; t++) {
+        for (int z = 1; z <= geo.L_int; z++) {
+            for (int y = 1; y <= geo.L_int; y++) {
+                for (int x = 1; x <= geo.L_int; x++) {
+                    size_t site = geo.index(x, y, z, t);
+                    auto local = local_q_e_clover(field, geo, site);
+                    q += local.first;
+                    e += local.second;
+                }
+            }
+        }
+    }
+    return {q, e};
+}
+
+// Returns topological charge and energy density of the whole lattice
+std::pair<double, double> mpi::observables::topo_q_e_clover_global(const GaugeField& field,
+                                                                   const Geometry& geo,
+                                                                   MpiTopology& topo) {
+    auto local_res = topo_q_e_clover(field, geo);
+    double local_q = local_res.first;
+    double local_e_total = local_res.second;
+
+    double global_send_buffer[2] = {local_q, local_e_total};
+    double global_recv_buffer[2] = {0.0, 0.0};
+
+    // On somme les charges et les énergies de tous les rangs
+    MPI_Allreduce(global_send_buffer, global_recv_buffer, 2, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+    double total_q = global_recv_buffer[0];
+    double total_e = global_recv_buffer[1];
+
+    double total_volume = static_cast<double>(geo.V_int) * topo.size;
+
+    // On retourne {Charge Totale, Densité d'énergie moyenne globale}
+    return {total_q, total_e / total_volume};
+};
