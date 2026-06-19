@@ -10,7 +10,7 @@ N_shift=100
 
 #ECMC params
 beta=6
-param_theta_sample=1000
+param_theta_sample=2000
 param_theta_refresh=300
 poisson=false
 
@@ -26,6 +26,6 @@ N_steps_gf = 2
 N_rk_steps = 100
 
 #Save params
-run_name = test
+run_name = e
 run_dir = data
 save_each_shifts = 2000

@@ -6,7 +6,7 @@ cold_start=true
 
 #Run params
 seed=12345
-N_shift=50
+N_shift=100
 
 #Heatbath params
 beta = 6.0
@@ -21,10 +21,10 @@ T_max=7
 #Topo params
 topo = true
 N_shift_topo = 25
-N_steps_gf = 10
-N_rk_steps = 40
+N_steps_gf = 2
+N_rk_steps = 100
 
 #Save params
-run_name = test
+run_name = h
 run_dir = data
 save_each_shifts = 2000
