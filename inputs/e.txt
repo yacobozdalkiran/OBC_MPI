@@ -1,0 +1,31 @@
+#Lattice params
+T=8
+L_core=4
+n_core_dims=2
+cold_start=false
+
+#Run params
+seed=12345
+N_shift=100
+
+#ECMC params
+beta=6
+param_theta_sample=1000
+param_theta_refresh=300
+poisson=false
+
+#Plaquette params (T_min and T_max are included)
+N_shift_plaquette = 1
+T_min=0
+T_max=7
+
+#Topo params
+topo = true
+N_shift_topo = 25
+N_steps_gf = 2
+N_rk_steps = 100
+
+#Save params
+run_name = test
+run_dir = data
+save_each_shifts = 2000

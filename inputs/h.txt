@@ -1,0 +1,30 @@
+#Lattice params
+T=8
+L_core=4
+n_core_dims=2
+cold_start=true
+
+#Run params
+seed=12345
+N_shift=50
+
+#Heatbath params
+beta = 6.0
+N_sweeps = 1
+N_hits = 1
+
+#Plaquette params (T_min and T_max are included)
+N_shift_plaquette = 1
+T_min=0
+T_max=7
+
+#Topo params
+topo = true
+N_shift_topo = 25
+N_steps_gf = 10
+N_rk_steps = 40
+
+#Save params
+run_name = test
+run_dir = data
+save_each_shifts = 2000
