@@ -19,7 +19,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(lime)
 
-add_executable(test_mpi src/bin/test_mpi.cpp
+add_executable(test_mpi src/bin/test/test_mpi.cpp
     src/su3/utils.cpp
     src/gauge/GaugeField.cpp
     src/geometry/Geometry.cpp
@@ -54,7 +54,7 @@ else()
     )
 endif()
 
-add_executable(test_ecmc src/bin/test_ecmc.cpp
+add_executable(test_ecmc src/bin/test/test_ecmc.cpp
     src/su3/utils.cpp
     src/gauge/GaugeField.cpp
     src/geometry/Geometry.cpp
@@ -90,7 +90,7 @@ else()
     )
 endif()
  
-add_executable(test_hb src/bin/test_hb.cpp
+add_executable(test_hb src/bin/test/test_hb.cpp
     src/su3/utils.cpp
     src/gauge/GaugeField.cpp
     src/geometry/Geometry.cpp
@@ -127,7 +127,7 @@ else()
     )
 endif()
 
-add_executable(test_ildg src/bin/test_ildg.cpp
+add_executable(test_ildg src/bin/test/test_ildg.cpp
     src/su3/utils.cpp
     src/gauge/GaugeField.cpp
     src/geometry/Geometry.cpp
