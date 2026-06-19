@@ -73,13 +73,14 @@ void heatbath::hit(GaugeField& field, const Geometry& geo, size_t site, int mu, 
 void heatbath::sweep(GaugeField& field, const Geometry& geo, double beta, int N_hits,
                      std::mt19937_64& rng) {
     SU3 A;
-    for (int t = 1; t <= geo.L_int; t++) {
+    for (int t = 0; t < geo.T; t++) {
         for (int z = 1; z <= geo.L_int; z++) {
             for (int y = 1; y <= geo.L_int; y++) {
                 for (int x = 1; x <= geo.L_int; x++) {
                     size_t site = geo.index(x, y, z, t);
                     for (int mu = 0; mu < 4; mu++) {
                         for (int h = 0; h < N_hits; h++) {
+                            if (t==geo.T-1 and mu==3) continue;
                             hit(field, geo, site, mu, beta, A, rng);
                         }
                     }

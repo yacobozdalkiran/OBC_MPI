@@ -601,7 +601,6 @@ bool io::read_params(RunParamsHbCB& params, int rank, const std::string& input) 
     MPI_Bcast(&params.N_switch_eo, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&params.N_therm, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.topo, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift_topo, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift_plaquette, 1, MPI_INT, 0, MPI_COMM_WORLD);
