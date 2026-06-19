@@ -94,10 +94,8 @@ void generate_hb_cb(const RunParamsHbCB& rp, bool existing) {
     // Print params
     print_parameters(rp, topo);
 
-    //==============================Heatbath===========================
+    //==============================Heatbath OBC===========================
 
-    // Thermalisation
-    // Skipped if existing conf (for array runs in slurm)
     int N_unit = 1000;
 
     // Sampling

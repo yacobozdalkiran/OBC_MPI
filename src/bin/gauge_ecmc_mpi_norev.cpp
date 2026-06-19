@@ -105,7 +105,7 @@ void generate_ecmc_cb(const RunParamsECB& rp, bool existing) {
     // Print params
     print_parameters(rp, topo);
 
-    //==============================ECMC===========================
+    //==============================ECMC OBC===========================
 
     int N_unit = 1000;  // reproj every N_unit shifts
     // Sampling
