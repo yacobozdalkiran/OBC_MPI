@@ -50,7 +50,7 @@ void io::save_plaquette(const std::vector<double>& data, const std::string& file
 
 // Saves a vector of doubles in ../data/filename/filename_final_Q.txt
 void io::save_final_Q(const std::vector<double>& data, const std::string& filename,
-                        const std::string& dirpath, int precision) {
+                      const std::string& dirpath, int precision) {
     // Create a data folder if doesn't exists
     fs::path base_dir(dirpath);
     fs::path dir = base_dir / filename;
@@ -397,7 +397,9 @@ void io::save_params(const RunParamsHbCB& rp, const std::string& filename,
 
     file << "# Run params\n";
     file << "seed=" << rp.seed << "\n";
-    file << "N_shift =" << rp.N_shift << "\n\n";
+    file << "N_shift =" << rp.N_shift << "\n";
+    file << "N_ov_sweep=" << rp.N_ov_sweep << "\n";
+    file << "N_ov_hit=" << rp.N_ov_hit << "\n\n";
 
     file << "# Heatbath params\n";
     file << "beta = " << rp.hp.beta << "\n";
@@ -450,13 +452,15 @@ void io::load_params(const std::string& filename, RunParamsECB& rp) {
     }
 
     // Lattice params
-    if (config.count("T")) rp.T= std::stoi(config["T"]);
+    if (config.count("T")) rp.T = std::stoi(config["T"]);
     if (config.count("L_core")) rp.L_core = std::stoi(config["L_core"]);
     if (config.count("n_core_dims")) rp.n_core_dims = std::stoi(config["n_core_dims"]);
     if (config.count("cold_start")) rp.cold_start = (config["cold_start"] == "true");
 
     if (config.count("seed")) rp.seed = std::stoi(config["seed"]);
     if (config.count("N_shift")) rp.N_shift = std::stoi(config["N_shift"]);
+    if (config.count("N_ov_sweep")) rp.N_ov_sweep = std::stoi(config["N_ov_sweep"]);
+    if (config.count("N_ov_hit")) rp.N_ov_hit = std::stoi(config["N_ov_hit"]);
 
     // ECMC params
     if (config.count("beta")) rp.ecmc_params.beta = std::stod(config["beta"]);
@@ -469,8 +473,8 @@ void io::load_params(const std::string& filename, RunParamsECB& rp) {
 
     if (config.count("N_shift_plaquette"))
         rp.N_shift_plaquette = std::stoi(config["N_shift_plaquette"]);
-    if (config.count("T_min")) rp.T_min= std::stoi(config["T_min"]);
-    if (config.count("T_max")) rp.T_max= std::stoi(config["T_max"]);
+    if (config.count("T_min")) rp.T_min = std::stoi(config["T_min"]);
+    if (config.count("T_max")) rp.T_max = std::stoi(config["T_max"]);
 
     // Run and topo params
     if (config.count("topo")) rp.topo = (config["topo"] == "true");
@@ -505,13 +509,15 @@ void io::load_params(const std::string& filename, RunParamsHbCB& rp) {
     }
 
     // Lattice params
-    if (config.count("T")) rp.T= std::stoi(config["T"]);
+    if (config.count("T")) rp.T = std::stoi(config["T"]);
     if (config.count("L_core")) rp.L_core = std::stoi(config["L_core"]);
     if (config.count("n_core_dims")) rp.n_core_dims = std::stoi(config["n_core_dims"]);
     if (config.count("cold_start")) rp.cold_start = (config["cold_start"] == "true");
 
     if (config.count("seed")) rp.seed = std::stoi(config["seed"]);
     if (config.count("N_shift")) rp.N_shift = std::stoi(config["N_shift"]);
+    if (config.count("N_ov_sweep")) rp.N_ov_sweep = std::stoi(config["N_ov_sweep"]);
+    if (config.count("N_ov_hit")) rp.N_ov_hit = std::stoi(config["N_ov_hit"]);
 
     // Hb params
     if (config.count("beta")) rp.hp.beta = std::stod(config["beta"]);
@@ -520,8 +526,8 @@ void io::load_params(const std::string& filename, RunParamsHbCB& rp) {
 
     if (config.count("N_shift_plaquette"))
         rp.N_shift_plaquette = std::stoi(config["N_shift_plaquette"]);
-    if (config.count("T_min")) rp.T_min= std::stoi(config["T_min"]);
-    if (config.count("T_max")) rp.T_max= std::stoi(config["T_max"]);
+    if (config.count("T_min")) rp.T_min = std::stoi(config["T_min"]);
+    if (config.count("T_max")) rp.T_max = std::stoi(config["T_max"]);
 
     // Run and topo params
     if (config.count("topo")) rp.topo = (config["topo"] == "true");
@@ -550,6 +556,8 @@ void print_parameters(const RunParamsHbCB& rp, const mpi::MpiTopology& topo) {
         std::cout << "---Run params---\n";
         std::cout << "Initial seed : " << rp.seed << "\n";
         std::cout << "Number of shifts : " << rp.N_shift << "\n";
+        std::cout << "Number of overrelaxation sweeps : " << rp.N_ov_sweep << ", " << rp.N_ov_hit
+                  << " hits\n";
         std::cout << "Save each : " << rp.save_each_shifts << " shifts\n\n";
 
         std::cout << "---Heatbath params---\n";
@@ -606,8 +614,10 @@ bool io::read_params(RunParamsHbCB& params, int rank, const std::string& input) 
     MPI_Bcast(&params.cold_start, 1, MPI_C_BOOL, 0, MPI_COMM_WORLD);
 
     MPI_Bcast(&params.N_shift, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.N_ov_sweep, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.N_ov_hit, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
-    
+
     MPI_Bcast(&params.N_shift_plaquette, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.T_min, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.T_max, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -703,6 +713,8 @@ void print_parameters(const RunParamsECB& rp, const mpi::MpiTopology& topo) {
         std::cout << "---Run params---\n";
         std::cout << "Initial seed : " << rp.seed << "\n";
         std::cout << "Number of shifts : " << rp.N_shift << "\n";
+        std::cout << "Number of overrelaxation sweeps : " << rp.N_ov_sweep << ", " << rp.N_ov_hit
+                  << " hits\n";
         std::cout << "Save each : " << rp.save_each_shifts << " shifts\n\n";
 
         std::cout << "---ECMC params---\n";
@@ -760,7 +772,9 @@ void io::save_params(const RunParamsECB& rp, const std::string& filename,
 
     file << "# Run params\n";
     file << "seed = " << rp.seed << "\n";
-    file << "N_shift = " << rp.N_shift << "\n\n";
+    file << "N_shift = " << rp.N_shift << "\n";
+    file << "N_ov_sweep=" << rp.N_ov_sweep << "\n";
+    file << "N_ov_hit=" << rp.N_ov_hit << "\n\n";
 
     file << "# ECMC params\n";
     file << "beta = " << rp.ecmc_params.beta << "\n";
@@ -805,6 +819,8 @@ bool io::read_params(RunParamsECB& params, int rank, const std::string& input) {
 
     MPI_Bcast(&params.seed, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.N_shift, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.N_ov_sweep, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&params.N_ov_hit, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     MPI_Bcast(&params.N_shift_plaquette, 1, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&params.T_min, 1, MPI_INT, 0, MPI_COMM_WORLD);
