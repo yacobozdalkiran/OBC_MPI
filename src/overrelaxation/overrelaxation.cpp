@@ -44,7 +44,7 @@ void overrelaxation::hit(GaugeField& field, const Geometry& geo, size_t site, in
 }
 
 // Full overrelaxation sweep (sequential/single-thread)
-void overrelaxation::sweep(GaugeField& field, const Geometry& geo) {
+void overrelaxation::sweep(GaugeField& field, const Geometry& geo, int N_hits) {
     SU3 A;
     for (int t = 0; t < geo.T; t++) {
         for (int z = 1; z <= geo.L_int; z++) {
@@ -53,7 +53,7 @@ void overrelaxation::sweep(GaugeField& field, const Geometry& geo) {
                     size_t site = geo.index(x, y, z, t);
                     for (int mu = 0; mu < 4; mu++) {
                         if (t == geo.T - 1 and mu == 3) continue;
-                        hit(field, geo, site, mu, A);
+                        for (int hits = 0; hits < N_hits; hits++) hit(field, geo, site, mu, A);
                     }
                 }
             }
@@ -92,7 +92,7 @@ void mpi::overrelaxationcb::hit(GaugeField& field, const Geometry& geo, size_t s
 
 // Performs an overrelaxation sweep on links of the specified parity
 void mpi::overrelaxationcb::sweep(GaugeField& field, const Geometry& geo,
-                                  site_parity update_parity) {
+                                  site_parity update_parity, int N_hits) {
     for (int mu = 0; mu < 4; mu++) {
 #pragma omp parallel for collapse(4)
         for (int t = 0; t < geo.T; t++) {
@@ -103,7 +103,7 @@ void mpi::overrelaxationcb::sweep(GaugeField& field, const Geometry& geo,
                         if (!geo.is_frozen(site, mu) and (geo.get_parity(site) == update_parity) and
                             not(t == geo.T - 1 and mu == 3)) {
                             SU3 A;
-                            hit(field, geo, site, mu, A);
+                            for (int hits = 0; hits < N_hits; hits++) hit(field, geo, site, mu, A);
                         }
                     }
                 }
@@ -113,9 +113,7 @@ void mpi::overrelaxationcb::sweep(GaugeField& field, const Geometry& geo,
 }
 
 // Runs a specified number of overrelaxation sweeps using checkerboard updates
-void mpi::overrelaxationcb::sample(GaugeField& field, const Geometry& geo, int N_sweeps) {
-    for (int s = 0; s < N_sweeps; s++) {
-        sweep(field, geo, site_parity::EV);
-        sweep(field, geo, site_parity::OD);
-    }
+void mpi::overrelaxationcb::full_sweep(GaugeField& field, const Geometry& geo, int N_hits) {
+    sweep(field, geo, site_parity::EV, N_hits);
+    sweep(field, geo, site_parity::OD, N_hits);
 }

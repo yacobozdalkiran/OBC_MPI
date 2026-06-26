@@ -12,7 +12,7 @@ namespace overrelaxation {
     void hit(GaugeField &field, const Geometry &geo, size_t site, int mu, SU3 &A);
 
     // Full overrelaxation sweep (sequential/single-thread)
-    void sweep(GaugeField &field, const Geometry &geo);
+    void sweep(GaugeField &field, const Geometry &geo, int N_hits);
 }
 
 namespace mpi::overrelaxationcb {
@@ -20,10 +20,10 @@ namespace mpi::overrelaxationcb {
     void hit(GaugeField &field, const Geometry &geo, size_t site, int mu, SU3 &A);
 
     // Performs an overrelaxation sweep on links of the specified parity
-    void sweep(GaugeField &field, const Geometry &geo, site_parity update_parity);
+    void sweep(GaugeField &field, const Geometry &geo, site_parity update_parity, int N_hits);
 
     // Runs a specified number of overrelaxation sweeps using checkerboard updates
-    void sample(GaugeField &field, const Geometry &geo, int N_sweeps);
+    void full_sweep(GaugeField &field, const Geometry &geo, int N_hits);
 }
 
 #endif // OBC_MPI_OVERRELAXATION_H
