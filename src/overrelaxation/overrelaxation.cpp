@@ -52,8 +52,10 @@ void overrelaxation::sweep(GaugeField& field, const Geometry& geo, int N_hits) {
                 for (int x = 1; x <= geo.L_int; x++) {
                     size_t site = geo.index(x, y, z, t);
                     for (int mu = 0; mu < 4; mu++) {
-                        if (t == geo.T - 1 and mu == 3) continue;
+                        if (!geo.is_frozen(site, mu) and (geo.get_parity(site) == update_parity) and
+                            not(t == geo.T - 1 and mu == 3)) {
                         for (int hits = 0; hits < N_hits; hits++) hit(field, geo, site, mu, A);
+                        }
                     }
                 }
             }
