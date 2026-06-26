@@ -14,6 +14,7 @@
 #include "../mpi/HalosShift.h"
 #include "../mpi/Shift.h"
 #include "../observables/observables_mpi.h"
+#include "../overrelaxation/overrelaxation.h"
 
 namespace fs = std::filesystem;
 
@@ -116,16 +117,41 @@ void generate_hb_cb(const RunParamsHbCB& rp, bool existing) {
         double start_time_sweep = MPI_Wtime();
         mpi::shift::random_shift(field, geo, halo_shift, topo, rng[0]);
         mpi::heatbathcb::sample(field, geo, hp, rng);
+        MPI_Barrier(MPI_COMM_WORLD);
+        double end_time_hb = MPI_Wtime();
+        if (topo.rank == 0) {
+            double total_time_hb = end_time_hb - start_time_sweep;
+            std::cout << std::fixed << std::setprecision(4);
+            std::cout << "Heatbath sweep time : " << total_time_hb << "s\n";
+        }
         if (i % N_unit == 0 and i > 0) {
             field.project_field_su3(geo);
         }
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
+
+
+        // Overrelaxation
+        for (int ov_sweep = 0; ov_sweep < rp.N_ov_sweep; ov_sweep++) {
+            MPI_Barrier(MPI_COMM_WORLD);
+            double start_time_ov = MPI_Wtime();
+            mpi::overrelaxationcb::full_sweep(field, geo, rp.N_ov_hit);
+            mpi::exchange::exchange_halos_cascade(field, geo, topo);
+            MPI_Barrier(MPI_COMM_WORLD);
+            double end_time_ov= MPI_Wtime();
+            if (topo.rank == 0) {
+                double total_time_ov = end_time_ov - start_time_ov;
+                std::cout << std::fixed << std::setprecision(4);
+                std::cout << "Overrelaxation sweep time : " << total_time_ov << "s\n";
+            }
+        }
+
+
         MPI_Barrier(MPI_COMM_WORLD);
         double end_time_sweep = MPI_Wtime();
         if (topo.rank == 0) {
             double total_time_sweep = end_time_sweep - start_time_sweep;
             std::cout << std::fixed << std::setprecision(4);
-            std::cout << "Sweep time : " << total_time_sweep << "s\n";
+            std::cout << "Total sweep time : " << total_time_sweep << "s\n";
         }
 
         // Plaquette measure

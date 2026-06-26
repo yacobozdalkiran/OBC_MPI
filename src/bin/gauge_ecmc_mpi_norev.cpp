@@ -14,6 +14,7 @@
 #include "../mpi/HalosShift.h"
 #include "../mpi/Shift.h"
 #include "../observables/observables_mpi.h"
+#include "../overrelaxation/overrelaxation.h"
 
 namespace fs = std::filesystem;
 
@@ -129,16 +130,39 @@ void generate_ecmc_cb(const RunParamsECB& rp, bool existing) {
         state.initialized = false;
 
         ecmc::sample_persistant_norev(state, d, field, geo, ep, rng[0]);
+        MPI_Barrier(MPI_COMM_WORLD);
+        double end_time_ecmc= MPI_Wtime();
+        if (topo.rank == 0) {
+            double total_time_ecmc = end_time_ecmc - start_time_sweep;
+            std::cout << std::fixed << std::setprecision(4);
+            std::cout << "ECMC sweep time : " << total_time_ecmc << "s\n";
+        }
         if (i % N_unit == 0 and i > 0) {
             field.project_field_su3(geo);
         }
         mpi::exchange::exchange_halos_cascade(field, geo, topo);
+
+        // Overrelaxation
+        for (int ov_sweep = 0; ov_sweep < rp.N_ov_sweep; ov_sweep++) {
+            MPI_Barrier(MPI_COMM_WORLD);
+            double start_time_ov = MPI_Wtime();
+            mpi::overrelaxationcb::full_sweep(field, geo, rp.N_ov_hit);
+            mpi::exchange::exchange_halos_cascade(field, geo, topo);
+            MPI_Barrier(MPI_COMM_WORLD);
+            double end_time_ov= MPI_Wtime();
+            if (topo.rank == 0) {
+                double total_time_ov = end_time_ov - start_time_ov;
+                std::cout << std::fixed << std::setprecision(4);
+                std::cout << "Overrelaxation sweep time : " << total_time_ov << "s\n";
+            }
+        }
+
         MPI_Barrier(MPI_COMM_WORLD);
         double end_time_sweep = MPI_Wtime();
         if (topo.rank == 0) {
             double total_time_sweep = end_time_sweep - start_time_sweep;
             std::cout << std::fixed << std::setprecision(4);
-            std::cout << "Sweep time : " << total_time_sweep << "s\n";
+            std::cout << "Total sweep time : " << total_time_sweep << "s\n";
         }
         // Plaquette measure
         if ((i % rp.N_shift_plaquette == 0)) {
