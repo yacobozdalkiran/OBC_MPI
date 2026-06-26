@@ -7,6 +7,8 @@ cold_start=true
 #Run params
 seed=12345
 N_shift=100
+N_ov_sweep=2
+N_ov_hit=1
 
 #Heatbath params
 beta = 6.0

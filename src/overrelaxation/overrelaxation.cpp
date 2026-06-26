@@ -52,9 +52,8 @@ void overrelaxation::sweep(GaugeField& field, const Geometry& geo, int N_hits) {
                 for (int x = 1; x <= geo.L_int; x++) {
                     size_t site = geo.index(x, y, z, t);
                     for (int mu = 0; mu < 4; mu++) {
-                        if (!geo.is_frozen(site, mu) and (geo.get_parity(site) == update_parity) and
-                            not(t == geo.T - 1 and mu == 3)) {
-                        for (int hits = 0; hits < N_hits; hits++) hit(field, geo, site, mu, A);
+                        if (!geo.is_frozen(site, mu) and not(t == geo.T - 1 and mu == 3)) {
+                            for (int hits = 0; hits < N_hits; hits++) hit(field, geo, site, mu, A);
                         }
                     }
                 }
@@ -93,8 +92,8 @@ void mpi::overrelaxationcb::hit(GaugeField& field, const Geometry& geo, size_t s
 }
 
 // Performs an overrelaxation sweep on links of the specified parity
-void mpi::overrelaxationcb::sweep(GaugeField& field, const Geometry& geo,
-                                  site_parity update_parity, int N_hits) {
+void mpi::overrelaxationcb::sweep(GaugeField& field, const Geometry& geo, site_parity update_parity,
+                                  int N_hits) {
     for (int mu = 0; mu < 4; mu++) {
 #pragma omp parallel for collapse(4)
         for (int t = 0; t < geo.T; t++) {

@@ -7,6 +7,8 @@ cold_start=false
 #Run params
 seed=12345
 N_shift=100
+N_ov_sweep=2
+N_ov_hit=1
 
 #ECMC params
 beta=6
