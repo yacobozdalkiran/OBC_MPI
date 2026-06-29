@@ -35,13 +35,13 @@ void mpi::heatbathcb::hit(GaugeField& field, const Geometry& geo, size_t site, i
 // Performs a Heatbath sweep on the non-frozen links
 void mpi::heatbathcb::sweep(GaugeField& field, const Geometry& geo, double beta, int N_hits,
                             std::vector<std::mt19937_64>& rng, site_parity update_parity) {
+    for (int mu = 0; mu < 4; mu++) {
 #pragma omp parallel for collapse(4)
-    for (int t = 0; t < geo.T; t++) {
-        for (int z = 1; z <= geo.L_int; z++) {
-            for (int y = 1; y <= geo.L_int; y++) {
-                for (int x = 1; x <= geo.L_int; x++) {
-                    size_t site = geo.index(x, y, z, t);
-                    for (int mu = 0; mu < 4; mu++) {
+        for (int t = 0; t < geo.T; t++) {
+            for (int z = 1; z <= geo.L_int; z++) {
+                for (int y = 1; y <= geo.L_int; y++) {
+                    for (int x = 1; x <= geo.L_int; x++) {
+                        size_t site = geo.index(x, y, z, t);
                         if (!geo.is_frozen(site, mu) and (geo.get_parity(site) == update_parity) and
                             not(t == geo.T - 1 and mu == 3)) {
                             int tid = omp_get_thread_num();
