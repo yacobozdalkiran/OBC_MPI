@@ -14,8 +14,8 @@ find_package(Eigen3 REQUIRED)
 include(FetchContent)
 FetchContent_Declare(
         lime
-        GIT_REPOSITORY https://github.com/usqcd-software/c-lime.git
-        GIT_TAG        master  
+        URL ${CMAKE_CURRENT_SOURCE_DIR}/clime/c-lime-master.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP true
 )
 FetchContent_MakeAvailable(lime)
 
