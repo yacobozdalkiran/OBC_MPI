@@ -1,4 +1,5 @@
 #include "HalosExchange.h"
+#include <iostream>
 
 //Exchanges the halos between cores in cascade (for corners)
 void mpi::exchange::exchange_halos_cascade(GaugeField& field, const Geometry& geo,

@@ -899,6 +899,7 @@ bool io::read_params(RunParamsECB& params, int rank, const std::string& input) {
         if (rank == 0) std::cout << "All ranks found existing configuration. Resuming...\n";
         return true;
     } else {
+        if (rank == 0) std::cout << "Starting new run...\n";
         return false;
     }
 }
